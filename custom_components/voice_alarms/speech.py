@@ -112,6 +112,54 @@ def format_when(
     )
 
 
+def describe_created(
+    alarm: Alarm,
+    target: Target | None,
+    now: datetime,
+    *,
+    show_target: bool,
+    language: str = DEFAULT_LANGUAGE,
+) -> str:
+    """What was just created, as short as a person says it: 'Reminder today at 15:00 (call mom)'.
+
+    The weekday list, the date of the next ring, how long that is from now and the
+    satellite are left out: the user just said them (the satellite only when it is not
+    the one they are speaking to). Listings and changes are described in full.
+    """
+    kind = "reminder" if alarm.is_reminder else "alarm"
+    if alarm.is_recurring:
+        what = tr(language, f"short_{kind}_repeating", schedule=describe_schedule(alarm, language))
+    else:
+        nxt = alarm.next_occurrence(max(now, alarm.pending_after()))
+        local = dt_util.as_local(nxt) if nxt else None
+        today = dt_util.as_local(now).date()
+        if local is None:
+            when = alarm.time.strftime("%H:%M")
+        else:
+            day = local.date()
+            if day == today:
+                day_text = tr(language, "day_today")
+            elif day == today + timedelta(days=1):
+                day_text = tr(language, "day_tomorrow_short")
+            else:
+                day_text = tr(
+                    language,
+                    "day_on",
+                    day=format_long_day(day, language, year=day.year != today.year),
+                )
+            when = tr(language, "when_at", day=day_text, time=local.strftime("%H:%M"))
+        what = tr(language, f"short_{kind}_once", when=when)
+    saying = ""
+    if alarm.is_reminder and alarm.message:
+        saying = tr(language, "created_saying", message=alarm.message)
+    elif alarm.name:
+        saying = tr(language, "created_saying", message=alarm.name)
+    where = ""
+    if show_target:
+        where = tr(language, "created_where", where=target.display if target else alarm.target)
+    return tr(language, "created_short", what=what, saying=saying, where=where)
+
+
 def format_duration(seconds: int, language: str = DEFAULT_LANGUAGE) -> str:
     """Describe a duration in seconds."""
     if seconds % 60 == 0:

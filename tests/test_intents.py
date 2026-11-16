@@ -61,9 +61,7 @@ async def test_set_defaults_to_speaking_satellite(hass: HomeAssistant, ready, sa
     )
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
     text = speech(response)
-    assert text.startswith("Created repeating alarm 'work' at 07:00 weekdays on Voice PE Kitchen")
-    assert "tomorrow (Tuesday 8 September) at 07:00" in text
-    assert "in 21 hours" in text
+    assert text == "Set: alarm at 07:00 weekdays (work)."
     alarm = ready.get_alarm(response.speech_slots["alarm_id"])
     assert alarm.target == satellites["kitchen"]["satellite"]
     assert alarm.weekdays == [0, 1, 2, 3, 4]
@@ -82,10 +80,9 @@ async def test_set_with_named_target_and_date(hass: HomeAssistant, ready, satell
     alarm = ready.get_alarm(response.speech_slots["alarm_id"])
     assert alarm.target == satellites["bedroom"]["satellite"]
     assert alarm.date.isoformat() == "2026-09-11"
-    assert (
-        "one-time alarm 'Alarm 06:30' at 06:30 on Friday 11 September on Voice PE Bedroom"
-        in speech(response)
-    )
+    # Another satellite than the one spoken to is named; the date is, as it is not
+    # today or tomorrow.
+    assert speech(response) == "Set: alarm on Friday 11 September at 06:30, on Voice PE Bedroom."
 
 
 async def test_set_reminder(hass: HomeAssistant, ready, satellites) -> None:
@@ -94,10 +91,7 @@ async def test_set_reminder(hass: HomeAssistant, ready, satellites) -> None:
     )
     alarm = ready.get_alarm(response.speech_slots["alarm_id"])
     assert alarm.is_reminder
-    assert (
-        "one-time reminder 'call mom' at 17:00 on Monday 7 September on Voice PE Kitchen, next today at 17:00"
-        in speech(response)
-    )
+    assert speech(response) == "Set: reminder today at 17:00 (call mom)."
 
 
 async def test_set_without_context_needs_target(hass: HomeAssistant, ready, satellites) -> None:
@@ -119,7 +113,7 @@ async def test_set_past_time_today_rolls_to_tomorrow(
     hass: HomeAssistant, ready, satellites
 ) -> None:
     response = await handle(hass, INTENT_SET, satellites["kitchen"]["device_id"], time="09:00")
-    assert "tomorrow (Tuesday 8 September) at 09:00" in speech(response)
+    assert speech(response) == "Set: alarm tomorrow at 09:00."
     response = await handle(
         hass, INTENT_SET, satellites["kitchen"]["device_id"], time="09:00", date="today"
     )

@@ -21,9 +21,13 @@ PROMPT = (
     "weekday names are also accepted). Pick alarms with the time, name or date filters; there "
     "is no need to list first to get an id. When the user asks what rings on a particular day "
     "('when will you wake me tomorrow?', 'do I have an alarm on Friday?'), call the list tool "
-    "with that date and answer with just the times it reports. After creating or changing an "
-    "alarm, tell the user exactly what the tool reported: the time, the days, the date of the "
-    "next ring and the satellite. If the tool reports an error or asks a question, relay it."
+    "with that date and answer with just the times it reports. Answers are heard through a "
+    "speaker: keep them to one short sentence. After creating an alarm or reminder, confirm in "
+    "a few words what the tool reported, as 'Okay, reminder today at 15:00.' - do not repeat "
+    "the date, the weekday, how long it is from now or the satellite unless the tool names "
+    "one (it does only when it is not the satellite the user is speaking to). After changing "
+    "or listing, give the times and the changes, nothing else. If the tool reports an error or "
+    "asks a question, relay it."
 )
 
 

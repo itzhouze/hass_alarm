@@ -222,10 +222,9 @@ async def test_set_repeating_german(hass: HomeAssistant, ready, satellites) -> N
         name="Arbeit",
     )
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
-    assert speech(response) == (
-        "Erstellt: wiederkehrender Wecker 'Arbeit' um 07:00 wochentags auf Voice PE Kitchen, "
-        "nächstes Mal morgen (Dienstag, 8. September) um 07:00 (in 21 Stunden)."
-    )
+    # Short, as spoken: no date of the next ring, no "in 21 hours", no satellite (it is
+    # the one that was spoken to).
+    assert speech(response) == "Gestellt: Wecker um 07:00 wochentags (Arbeit)."
     assert response.speech_slots["repeats"] == "wochentags"
 
 
@@ -237,10 +236,7 @@ async def test_set_reminder_german(hass: HomeAssistant, ready, satellites) -> No
         time="17:00",
         message="Mama anrufen",
     )
-    assert speech(response) == (
-        "Erstellt: einmalige Erinnerung 'Mama anrufen' um 17:00 am Montag, 7. September auf "
-        "Voice PE Kitchen, nächstes Mal heute um 17:00 (in 7 Stunden)."
-    )
+    assert speech(response) == "Gestellt: Erinnerung heute um 17:00 (Mama anrufen)."
     assert response.speech_slots["repeats"] == "einmalig"
 
 
@@ -319,7 +315,7 @@ async def test_unknown_language_falls_back_to_english(
     response = await handle(
         hass, INTENT_SET, satellites["kitchen"]["device_id"], language="fr", time="07:00"
     )
-    assert speech(response).startswith("Created one-time alarm 'Alarm 07:00' at 07:00")
+    assert speech(response) == "Set: alarm tomorrow at 07:00."
 
 
 # ----------------------------------------------------------- instance language

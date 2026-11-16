@@ -82,9 +82,10 @@ automatically. No extra configuration is needed. Examples:
 | "Delete the 7 o'clock alarm" | Deletes it (asks if several match). |
 | "Stop" / "Dismiss the alarm" / "Snooze for 10 minutes" | Stops (or snoozes) the ringing alarm. |
 
-The tool responses are precise sentences such as
-*"Created repeating alarm 'work' at 06:30 weekdays on Kitchen, next tomorrow (Tuesday 8
-September) at 06:30 (in 20 hours and 12 minutes)."* and the LLM is instructed to relay them.
+Creating something is confirmed the way a person says it, e.g. *"Set: reminder today at 15:00
+(call mom)."*; the satellite is named only when it is not the one you are talking to. Listings
+and changes are described in full (every time, the days, what changed), and the LLM is told to
+answer through the speaker in one short sentence.
 
 Responses are given in the language of the conversation. English and German are built in;
 any other language gets English, which the LLM translates. The parsers also understand

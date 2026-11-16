@@ -43,6 +43,7 @@ from .speech import (
     capitalize,
     describe_alarm,
     describe_briefly,
+    describe_created,
     format_day,
     format_days,
     format_relative,
@@ -288,8 +289,8 @@ class SetAlarmIntent(_VoiceAlarmIntent):
         "20 hours to fetch the laundry' (in_hours=20), 'wake me in 8 hours' (in_hours=8). The "
         "alarm is one-time unless weekdays are given. Give a message to create a reminder that "
         "is spoken aloud instead of an alarm sound. Rings on the satellite the user is talking "
-        "to unless a target is named. The response says exactly what was created; repeat it to "
-        "the user."
+        "to unless a target is named. The response is short and says what was created; confirm "
+        "it to the user in a few words."
     )
     slot_schema = {
         vol.Optional("time", description=TIME_HELP): cv.string,
@@ -360,8 +361,15 @@ class SetAlarmIntent(_VoiceAlarmIntent):
         )
         alarm = await self.manager.async_add_alarm(alarm)
         nxt = alarm.next_pending(dt_util.utcnow())
+        current = self._current_target(intent_obj)
         response.async_set_speech(
-            tr(lang, "created", alarm=describe_alarm(alarm, target, now, language=lang))
+            describe_created(
+                alarm,
+                target,
+                now,
+                show_target=current is None or current.entity_id != target.entity_id,
+                language=lang,
+            )
         )
         response.async_set_speech_slots(
             {

@@ -138,8 +138,8 @@ async def test_llm_tools_exposed(hass: HomeAssistant, satellites, manager) -> No
     assert not tool_result.error
     result = tool_result.data
     assert result["response_type"] == "action_done"
-    assert result["speech"]["plain"]["speech"].startswith(
-        "Created repeating alarm 'gym' at 07:15 every Monday and Friday on Voice PE Kitchen"
+    assert (
+        result["speech"]["plain"]["speech"] == "Set: alarm at 07:15 every Monday and Friday (gym)."
     )
     assert result["speech_slots"]["target"] == satellites["kitchen"]["satellite"]
 

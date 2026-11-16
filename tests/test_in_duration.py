@@ -98,7 +98,7 @@ async def test_set_in_hours_is_a_one_time_reminder(hass: HomeAssistant, ready, s
     assert alarm.message == "fetch the laundry"
     assert not alarm.is_recurring
     assert ring_at(ready, response) == START + timedelta(hours=20)
-    assert "tomorrow (Tuesday 8 September) at 06:00" in speech(response)
+    assert speech(response) == "Set: reminder tomorrow at 06:00 (fetch the laundry)."
 
 
 async def test_set_in_rounds_up_to_the_minute(
@@ -165,7 +165,7 @@ async def test_timer_command_to_remind_becomes_a_reminder(
         conversation_command="erinnere mich an die Wäsche",
     )
     assert response.response_type == intent.IntentResponseType.ACTION_DONE
-    assert speech(response).startswith("Erstellt: einmalige Erinnerung 'die Wäsche'")
+    assert speech(response) == "Gestellt: Erinnerung morgen um 06:00 (die Wäsche)."
     alarm = ready.get_alarm(response.speech_slots["alarm_id"])
     assert alarm.kind == KIND_REMINDER
     assert alarm.message == "die Wäsche"
@@ -242,8 +242,9 @@ async def test_german_sentence_through_home_assistants_own_recognition(
         device_id=satellites["kitchen"]["device_id"],
     )
     assert result.response.response_type == intent.IntentResponseType.ACTION_DONE
-    assert result.response.speech["plain"]["speech"].startswith(
-        "Erstellt: einmalige Erinnerung 'die Wäsche'"
+    assert (
+        result.response.speech["plain"]["speech"]
+        == "Gestellt: Erinnerung morgen um 06:00 (die Wäsche)."
     )
     (alarm,) = ready.alarms.values()
     assert alarm.message == "die Wäsche"
