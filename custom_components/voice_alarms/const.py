@@ -103,6 +103,11 @@ SIGNAL_ALARMS_UPDATED: Final = f"{DOMAIN}_alarms_updated"
 SIGNAL_TARGETS_UPDATED: Final = f"{DOMAIN}_targets_updated"
 SIGNAL_RINGING_UPDATED: Final = f"{DOMAIN}_ringing_updated"
 SIGNAL_CONFIG_UPDATED: Final = f"{DOMAIN}_config_updated"
+SIGNAL_TIMERS_UPDATED: Final = f"{DOMAIN}_timers_updated"
+SIGNAL_LOG_UPDATED: Final = f"{DOMAIN}_log_updated"
+
+# What the panel's log shows: the last this many things that happened.
+MAX_EVENT_LOG: Final = 100
 
 # HTTP
 STREAM_URL_BASE: Final = f"/api/{DOMAIN}/stream"

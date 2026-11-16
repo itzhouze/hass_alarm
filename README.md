@@ -24,8 +24,8 @@ supported.
 - Voice control through the Assist LLM API: set, list, change, skip, delete, dismiss and
   snooze. The satellite you are talking to is the default target; any other satellite can
   be named. Every voice action answers with exactly what changed.
-- Web UI: a **Voice Alarms** sidebar panel to create, edit, enable/disable, skip and delete
-  alarms; the target satellite must be chosen explicitly there.
+- Web UI: a **Voice Alarms** sidebar panel, see [The panel](#the-panel): everything that is
+  scheduled or running at a glance, with problems called out, plus a log and diagnostics.
 - Services and entities for automations: per satellite a *Next alarm* sensor, a *Ringing*
   binary sensor and *Dismiss* / *Test* buttons; per alarm a switch to enable or disable it.
 - Alarms ring for a configurable duration (default 5 minutes) and fade in over the first
@@ -40,6 +40,29 @@ supported.
   when Home Assistant handles the sentence itself instead of the LLM.
 - English and German throughout: panel, config flow, entities, services and the spoken
   responses.
+
+## The panel
+
+The **Voice Alarms** entry in the sidebar is an overview of everything the integration keeps:
+
+- **At the top:** the next alarm or reminder, the soonest timer (counting down live), how much
+  is scheduled, and a status that turns red or yellow when something needs a look.
+- **Needs attention:** a list of what is wrong, in words: a satellite that is unavailable (nothing
+  can ring there, its timers cannot be delivered), an alarm whose satellite no longer exists, an
+  enabled alarm whose time has passed, timers that ended but have not rung yet, a missing ffmpeg,
+  a satellite that reports no timer support.
+- **Timers:** every running or paused Assist timer with a live countdown and progress bar, where it
+  runs and when it ends; pause, resume, add a minute or cancel from here. Timers that ended while
+  their satellite was away are listed as waiting.
+- **Alarms and reminders:** as before, each with a *Details* fold-out (id, created, last rang, how
+  long it rings, sound, skipped occurrence).
+- **Satellites:** one card per satellite with its state (idle, listening, speaking, unavailable),
+  its media player and volume, timer support, its running timers and its next alarm; *Test* and *Stop*.
+- **Log:** the last 100 things that happened since Home Assistant started: what rang where, how it
+  ended (stopped by hand, on the device, by snooze, timed out), what was missed, timers started,
+  cancelled, rung, rung late or dropped.
+- **Diagnostics:** versions, time zone, when the scheduler wakes next, whether the timer keeper is
+  active, and a button that copies all of it as text, to paste into an issue.
 
 ## Installation
 

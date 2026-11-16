@@ -18,6 +18,14 @@ const ICONS = {
   stop: "M18,18H6V6H18V18Z",
   speaker:
     "M12,3V9L9,6.5L6,9H2V15H6L9,17.5L12,15V21C12,21 15.5,20.2 17.9,17.8C20.3,15.4 21,12 21,12C21,12 20.3,8.6 17.9,6.2C15.5,3.8 12,3 12,3Z",
+  pause: "M14,19H18V5H14M6,19H10V5H6V19Z",
+  timer:
+    "M15,1H9V3H15M11,14H13V8H11M19.03,7.39L20.45,5.97C20,5.46 19.55,5 19.04,4.56L17.62,6C16.07,4.74 14.12,4 12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22C17,22 21,17.97 21,13C21,10.88 20.26,8.93 19.03,7.39M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6C15.87,6 19,9.13 19,13C19,16.87 15.87,20 12,20Z",
+  copy: "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z",
+  check: "M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z",
+  alert: "M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z",
+  bug:
+    "M14,12H10V10H14M14,16H10V14H14M20,8H17.19C16.74,7.22 16.12,6.55 15.37,6.04L17,4.41L15.59,3L13.42,5.17C12.96,5.06 12.5,5 12,5C11.5,5 11.04,5.06 10.59,5.17L8.41,3L7,4.41L8.62,6.04C7.88,6.55 7.26,7.22 6.81,8H4V10H6.09C6.04,10.33 6,10.66 6,11V12H4V14H6V15C6,15.34 6.04,15.67 6.09,16H4V18H6.81C7.85,19.79 9.78,21 12,21C14.22,21 16.15,19.79 17.19,18H20V16H17.91C17.96,15.67 18,15.34 18,15V14H20V12H18V11C18,10.66 17.96,10.33 17.91,10H20V8Z",
 };
 
 const DAY_CODES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -28,6 +36,117 @@ const DAY_CODES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const STRINGS = {
   en: {
     menu: "Sidebar",
+    // overview
+    ov_next: "Next alarm or reminder",
+    ov_nothing_next: "Nothing scheduled",
+    ov_timers: "Timers",
+    ov_timers_running: "{n} running",
+    ov_timers_none: "No timer running",
+    ov_next_timer: "next ends in {when}",
+    ov_scheduled: "Scheduled",
+    ov_count_alarms: "{n} alarms",
+    ov_count_reminders: "{n} reminders",
+    ov_disabled: "{n} disabled",
+    ov_status: "Status",
+    ov_ok: "All good",
+    ov_issues: "{n} to look at",
+    ov_sats_ok: "{ok} of {all} satellites reachable",
+    issues: "Needs attention",
+    p_sat_unavailable: "{name} is unavailable: nothing can ring there and its timers cannot be delivered.",
+    p_sat_no_timers: "{name} does not report timer support: Assist timers set on it will not work.",
+    p_unknown_sat: "“{label}” belongs to a satellite that no longer exists.",
+    p_in_past: "“{label}” is enabled but its time has passed.",
+    p_timers_pending: "{n} timer(s) ended but have not rung yet: waiting for the satellite.",
+    p_timers_unsent: "{n} timer cancellation(s) not yet passed on to a satellite that was offline.",
+    p_timers_inactive: "The timer keeper is not active: timers are lost on a restart.",
+    p_no_ffmpeg: "ffmpeg is missing: the custom sound plays without the volume ramp.",
+    timers: "Timers",
+    no_timers: "No timer running. Say “set a timer for 5 minutes” to a satellite.",
+    timers_inactive: "The timer keeper is not active.",
+    timer_of: "Timer {dur}",
+    timer_cmd: "Then: “{command}”",
+    timer_total: "of {dur}",
+    timer_ends: "ends {time}",
+    timer_paused: "Paused",
+    timer_waiting: "Ended {ago} ago, waiting for the satellite",
+    timer_pause: "Pause",
+    timer_resume: "Resume",
+    timer_add: "+1 min",
+    timer_cancel: "Cancel timer",
+    details: "Details",
+    d_id: "ID",
+    d_created: "Created",
+    d_last_fired: "Last rang",
+    d_never: "never",
+    d_duration: "Rings for",
+    d_default: "default ({dur})",
+    d_sound: "Sound",
+    d_skipped: "Skipped",
+    sat_state: "State",
+    sat_volume: "Volume",
+    sat_timers: "Timers",
+    sat_timer_support: "Timer support",
+    sat_yes: "yes",
+    sat_no: "no",
+    sat_next: "Next",
+    sat_idle: "idle",
+    sat_listening: "listening",
+    sat_processing: "thinking",
+    sat_responding: "speaking",
+    sat_unavailable: "unavailable",
+    sat_unknown: "unknown",
+    sat_player: "Player",
+    sat_n_timers: "{n} running",
+    log: "Log",
+    log_empty: "Nothing has happened since Home Assistant started.",
+    log_note: "The last {n} events since Home Assistant started.",
+    ev_rings: "{what} “{label}” rings on {where}",
+    ev_ring_ended: "{what} “{label}” on {where} ended: {by}, after {dur}",
+    ev_missed: "Missed {what} “{label}” ({scheduled}), too late to ring",
+    ev_no_satellite: "Cannot ring {what} “{label}”: satellite {entity} is missing",
+    ev_timer_started: "Timer {name} started: {dur} on {where}",
+    ev_timer_cancelled: "Timer {name} cancelled ({dur}) on {where}",
+    ev_timer_rang: "Timer {name} ({dur}) rings on {where}",
+    ev_timer_late: "Timer {name} ({dur}) rang {late} late on {where}",
+    ev_timer_dropped: "Timer {name} ({dur}) was {late} too late and dropped ({where})",
+    ev_timers_taken_over: "Timer keeper started: {running} running or paused, {pending} waiting to ring",
+    by_user: "stopped by hand",
+    by_timeout: "ran its time",
+    by_device: "stopped on the device",
+    by_snooze: "snoozed",
+    by_superseded: "replaced by another",
+    by_shutdown: "Home Assistant stopped",
+    by_service: "stopped by an action",
+    by_voice: "stopped by voice",
+    diagnostics: "Diagnostics",
+    diag_copy: "Copy diagnostics",
+    diag_copied: "Copied",
+    diag_hint: "Everything on this page as text, to paste into an issue.",
+    k_version: "Voice Alarms",
+    k_ha: "Home Assistant",
+    k_tz: "Time zone",
+    k_lang: "Language",
+    k_started: "Running since",
+    k_next_check: "Scheduler wakes at",
+    k_timers: "Timer keeper",
+    k_alarms: "Alarms and reminders",
+    k_grace: "Missed alarm grace",
+    k_ffmpeg: "ffmpeg",
+    k_sats: "Satellites",
+    k_server_time: "Server time",
+    on: "active",
+    off: "not active",
+    found: "found",
+    missing: "missing",
+    min_short: "min",
+    ago_s: "{n} s",
+    ago_min: "{n} min",
+    ago_h: "{n} h",
+    dur_h: "{h} h",
+    dur_h_min: "{h} h {m} min",
+    dur_min: "{m} min",
+    dur_min_s: "{m} min {s} s",
+    dur_s: "{s} s",
     add: "Add",
     add_alarm: "Add alarm",
     add_reminder: "Add reminder",
@@ -126,6 +245,117 @@ const STRINGS = {
   },
   de: {
     menu: "Seitenleiste",
+    // overview
+    ov_next: "Nächster Wecker oder Erinnerung",
+    ov_nothing_next: "Nichts geplant",
+    ov_timers: "Timer",
+    ov_timers_running: "{n} laufen",
+    ov_timers_none: "Kein Timer aktiv",
+    ov_next_timer: "nächster endet in {when}",
+    ov_scheduled: "Geplant",
+    ov_count_alarms: "{n} Wecker",
+    ov_count_reminders: "{n} Erinnerungen",
+    ov_disabled: "{n} deaktiviert",
+    ov_status: "Status",
+    ov_ok: "Alles in Ordnung",
+    ov_issues: "{n} Hinweise",
+    ov_sats_ok: "{ok} von {all} Satelliten erreichbar",
+    issues: "Braucht Aufmerksamkeit",
+    p_sat_unavailable: "{name} ist nicht erreichbar: dort kann nichts klingeln und Timer können nicht zugestellt werden.",
+    p_sat_no_timers: "{name} meldet keine Timer-Unterstützung: Assist-Timer auf diesem Gerät funktionieren nicht.",
+    p_unknown_sat: "„{label}“ gehört zu einem Satelliten, den es nicht mehr gibt.",
+    p_in_past: "„{label}“ ist aktiv, aber die Zeit ist schon vorbei.",
+    p_timers_pending: "{n} Timer sind abgelaufen, aber noch nicht geklingelt: warten auf den Satelliten.",
+    p_timers_unsent: "{n} Timer-Abbrüche wurden einem offline gewesenen Satelliten noch nicht mitgeteilt.",
+    p_timers_inactive: "Die Timer-Verwaltung ist nicht aktiv: Timer gehen bei einem Neustart verloren.",
+    p_no_ffmpeg: "ffmpeg fehlt: der eigene Ton spielt ohne Lautstärkerampe.",
+    timers: "Timer",
+    no_timers: "Kein Timer aktiv. Sage zu einem Satelliten „Stell einen Timer auf 5 Minuten“.",
+    timers_inactive: "Die Timer-Verwaltung ist nicht aktiv.",
+    timer_of: "Timer {dur}",
+    timer_cmd: "Danach: „{command}“",
+    timer_total: "von {dur}",
+    timer_ends: "endet {time}",
+    timer_paused: "Pausiert",
+    timer_waiting: "Seit {ago} abgelaufen, wartet auf den Satelliten",
+    timer_pause: "Pausieren",
+    timer_resume: "Fortsetzen",
+    timer_add: "+1 Min.",
+    timer_cancel: "Timer abbrechen",
+    details: "Details",
+    d_id: "ID",
+    d_created: "Angelegt",
+    d_last_fired: "Zuletzt geklingelt",
+    d_never: "noch nie",
+    d_duration: "Klingelt",
+    d_default: "Standard ({dur})",
+    d_sound: "Ton",
+    d_skipped: "Übersprungen",
+    sat_state: "Zustand",
+    sat_volume: "Lautstärke",
+    sat_timers: "Timer",
+    sat_timer_support: "Timer-Unterstützung",
+    sat_yes: "ja",
+    sat_no: "nein",
+    sat_next: "Nächster",
+    sat_idle: "bereit",
+    sat_listening: "hört zu",
+    sat_processing: "denkt nach",
+    sat_responding: "spricht",
+    sat_unavailable: "nicht erreichbar",
+    sat_unknown: "unbekannt",
+    sat_player: "Player",
+    sat_n_timers: "{n} laufen",
+    log: "Protokoll",
+    log_empty: "Seit dem Start von Home Assistant ist nichts passiert.",
+    log_note: "Die letzten {n} Ereignisse seit dem Start von Home Assistant.",
+    ev_rings: "{what} „{label}“ klingelt auf {where}",
+    ev_ring_ended: "{what} „{label}“ auf {where} beendet: {by}, nach {dur}",
+    ev_missed: "{what} „{label}“ verpasst ({scheduled}), zu spät zum Klingeln",
+    ev_no_satellite: "{what} „{label}“ kann nicht klingeln: Satellit {entity} fehlt",
+    ev_timer_started: "Timer {name} gestartet: {dur} auf {where}",
+    ev_timer_cancelled: "Timer {name} abgebrochen ({dur}) auf {where}",
+    ev_timer_rang: "Timer {name} ({dur}) klingelt auf {where}",
+    ev_timer_late: "Timer {name} ({dur}) hat {late} zu spät geklingelt auf {where}",
+    ev_timer_dropped: "Timer {name} ({dur}) war {late} zu spät und wurde verworfen ({where})",
+    ev_timers_taken_over: "Timer-Verwaltung gestartet: {running} laufend oder pausiert, {pending} warten aufs Klingeln",
+    by_user: "von Hand beendet",
+    by_timeout: "Zeit abgelaufen",
+    by_device: "am Gerät beendet",
+    by_snooze: "Schlummern",
+    by_superseded: "durch anderes abgelöst",
+    by_shutdown: "Home Assistant wurde beendet",
+    by_service: "per Aktion beendet",
+    by_voice: "per Sprache beendet",
+    diagnostics: "Diagnose",
+    diag_copy: "Diagnose kopieren",
+    diag_copied: "Kopiert",
+    diag_hint: "Alles auf dieser Seite als Text, zum Einfügen in ein Issue.",
+    k_version: "Voice Alarms",
+    k_ha: "Home Assistant",
+    k_tz: "Zeitzone",
+    k_lang: "Sprache",
+    k_started: "Läuft seit",
+    k_next_check: "Planer wacht auf um",
+    k_timers: "Timer-Verwaltung",
+    k_alarms: "Wecker und Erinnerungen",
+    k_grace: "Nachholfrist für Verpasstes",
+    k_ffmpeg: "ffmpeg",
+    k_sats: "Satelliten",
+    k_server_time: "Serverzeit",
+    on: "aktiv",
+    off: "nicht aktiv",
+    found: "gefunden",
+    missing: "fehlt",
+    min_short: "Min.",
+    ago_s: "{n} s",
+    ago_min: "{n} Min.",
+    ago_h: "{n} Std.",
+    dur_h: "{h} Std.",
+    dur_h_min: "{h} Std. {m} Min.",
+    dur_min: "{m} Min.",
+    dur_min_s: "{m} Min. {s} Sek.",
+    dur_s: "{s} Sek.",
     add: "Hinzufügen",
     add_alarm: "Wecker hinzufügen",
     add_reminder: "Erinnerung hinzufügen",
@@ -445,7 +675,53 @@ const STYLE = `
   .presets button { background: transparent; color: var(--primary-color); border: 1px solid var(--primary-color); padding: 5px 10px; border-radius: 16px; font-size: 13px; }
   .presets button.active { background: var(--primary-color); color: var(--text-primary-color, #fff); }
   #ramp { width: min(600px, calc(100vw - 32px)); }
-  @media (max-width: 600px) { .time { font-size: 28px; min-width: 80px; } .two { grid-template-columns: 1fr; } }
+  main { max-width: 1100px; min-width: 0; }
+  .card { min-width: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 12px; margin-bottom: 12px; }
+  .tile { margin: 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .tile .k { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--secondary-text-color); }
+  .tile .v { font-size: 30px; font-weight: 300; line-height: 1.15; overflow-wrap: anywhere; }
+  .tile .s { font-size: 13px; color: var(--secondary-text-color); overflow-wrap: anywhere; }
+  .tile.ok .v { color: var(--success-color, #43a047); }
+  .tile.bad .v { color: var(--error-color, #db4437); }
+  .tile.warn .v { color: var(--warning-color, #ffa600); }
+  .issues { border-color: var(--warning-color, #ffa600); }
+  .issues ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .issues li { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  .issues li span { min-width: 0; overflow-wrap: anywhere; }
+  .issues li svg { flex: none; width: 20px; height: 20px; fill: var(--warning-color, #ffa600); }
+  .issues li.err svg { fill: var(--error-color, #db4437); }
+  .issues li.info svg { fill: var(--secondary-text-color); }
+  .issues .head { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .timer .time { font-variant-numeric: tabular-nums; min-width: 128px; }
+  .timer.paused .time { opacity: .6; }
+  .timer.waiting { border-color: var(--warning-color, #ffa600); }
+  .bar { height: 6px; border-radius: 3px; background: var(--secondary-background-color, #eee); margin-top: 8px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--primary-color); border-radius: 3px; transition: width 1s linear; }
+  .timer.paused .bar span, .timer.waiting .bar span { background: var(--secondary-text-color); }
+  .satgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 12px; }
+  .satgrid .card { margin: 0; }
+  .sat-card.offline { border-color: var(--error-color, #db4437); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--success-color, #43a047); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success-color, #43a047) 25%, transparent); }
+  .dot.busy { background: var(--primary-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent); }
+  .dot.off { background: var(--error-color, #db4437); box-shadow: 0 0 0 3px color-mix(in srgb, var(--error-color, #db4437) 25%, transparent); }
+  .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; font-size: 13px; margin-top: 10px; }
+  .kv dt { color: var(--secondary-text-color); }
+  .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .kv dd.mono, .mono { overflow-wrap: anywhere; font-family: var(--code-font-family, ui-monospace, monospace); font-size: 12px; }
+  details { margin-top: 8px; }
+  details summary { cursor: pointer; font-size: 13px; color: var(--primary-color); user-select: none; }
+  .log { display: grid; gap: 0; font-size: 13px; }
+  .log .ev { display: grid; grid-template-columns: 76px 1fr; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--divider-color, #eee); }
+  .log .ev:last-child { border-bottom: none; }
+  .log .at { color: var(--secondary-text-color); font-variant-numeric: tabular-nums; }
+  .log .ev.warn .tx { color: var(--warning-color, #ffa600); }
+  .log .ev.err .tx { color: var(--error-color, #db4437); }
+  .log .day { grid-column: 1 / -1; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--secondary-text-color); padding-top: 8px; }
+  .scroll { max-height: 420px; overflow: auto; }
+  .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .h2row { display: flex; align-items: center; gap: 8px; }
+  @media (max-width: 600px) { .time { font-size: 28px; min-width: 80px; } .two { grid-template-columns: 1fr; } .satgrid { grid-template-columns: minmax(0, 1fr); } .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timer .time { min-width: 100px; } }
 `;
 
 const esc = (s) =>
@@ -495,9 +771,23 @@ class VoiceAlarmsPanel extends HTMLElement {
     this._error = "";
     this._unsub = null;
     this._editing = null;
+    this._open = new Set(); // <details> the user opened, kept across redraws
+    this._skew = 0; // server clock minus browser clock, ms
+    this._copied = false;
     this.shadowRoot.innerHTML = `<style>${STYLE}</style><div id="app"></div><dialog id="editor"></dialog><dialog id="ramp"></dialog>`;
     this.shadowRoot.getElementById("app").addEventListener("click", (e) => this._onClick(e));
     this.shadowRoot.getElementById("app").addEventListener("change", (e) => this._onChange(e));
+    // "toggle" does not bubble: listen while it travels down.
+    this.shadowRoot.getElementById("app").addEventListener(
+      "toggle",
+      (e) => {
+        const key = e.target?.dataset?.key;
+        if (!key) return;
+        if (e.target.open) this._open.add(key);
+        else this._open.delete(key);
+      },
+      true
+    );
   }
 
   set hass(hass) {
@@ -527,9 +817,11 @@ class VoiceAlarmsPanel extends HTMLElement {
   connectedCallback() {
     this._render();
     this._timer = setInterval(() => this._render(), 30000);
+    this._ticker = setInterval(() => this._tick(), 1000);
   }
   disconnectedCallback() {
     clearInterval(this._timer);
+    clearInterval(this._ticker);
     if (this._unsub) {
       this._unsub.then((u) => u()).catch(() => {});
       this._unsub = null;
@@ -540,6 +832,7 @@ class VoiceAlarmsPanel extends HTMLElement {
     this._unsub = this._hass.connection.subscribeMessage(
       (msg) => {
         this._state = msg;
+        this._skew = Date.parse(msg.now) - Date.now();
         this._render();
       },
       { type: "voice_alarms/subscribe" }
@@ -558,10 +851,89 @@ class VoiceAlarmsPanel extends HTMLElement {
     return (this._state?.targets || []).find((t) => t.entity_id === id);
   }
 
+  // ---------------------------------------------------------------- helpers
+
+  _now() {
+    return new Date(Date.now() + (this._skew || 0));
+  }
+
+  _durText(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = s % 60;
+    if (h) return m ? t("dur_h_min", { h, m }) : t("dur_h", { h });
+    if (m) return r ? t("dur_min_s", { m, s: r }) : t("dur_min", { m });
+    return t("dur_s", { s: r });
+  }
+
+  _agoText(seconds) {
+    const s = Math.max(0, Math.round(seconds));
+    if (s < 90) return t("ago_s", { n: s });
+    if (s < 5400) return t("ago_min", { n: Math.round(s / 60) });
+    return t("ago_h", { n: Math.round(s / 3600) });
+  }
+
+  _clock(seconds) {
+    const s = Math.max(0, Math.ceil(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const r = String(s % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${r}` : `${m}:${r}`;
+  }
+
+  _timeOf(iso) {
+    return new Date(iso).toLocaleTimeString(this._locale, { hour: "2-digit", minute: "2-digit" });
+  }
+
+  _dateTime(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleString(this._locale, { dateStyle: "medium", timeStyle: "medium" });
+  }
+
+  _kindName(kind) {
+    return t(kind === "reminder" ? "reminder" : "alarm");
+  }
+
+  // The satellite behind a timer's device id.
+  _satOfDevice(deviceId) {
+    return (this._state?.targets || []).find((x) => x.device_id && x.device_id === deviceId);
+  }
+
+  _open_attr(key) {
+    return this._open.has(key) ? "open" : "";
+  }
+
+  // Things that deserve a look, worst first: [{level: "err"|"warn"|"info", text}].
+  _problems(st) {
+    const out = [];
+    const add = (level, key, params) => out.push({ level, text: t(key, params) });
+    if (!st.debug.timers_persistent) add("err", "p_timers_inactive");
+    for (const a of st.alarms) {
+      if (!this._target(a.target)) add("err", "p_unknown_sat", { label: a.label });
+    }
+    for (const sat of st.targets) {
+      if (!sat.available) add("err", "p_sat_unavailable", { name: sat.display });
+    }
+    const pending = st.timers?.pending?.length || 0;
+    if (pending) add("warn", "p_timers_pending", { n: pending });
+    if (st.timers?.unsent_cancels) add("warn", "p_timers_unsent", { n: st.timers.unsent_cancels });
+    for (const a of st.alarms) {
+      if (a.enabled && !a.next && this._target(a.target)) add("warn", "p_in_past", { label: a.label });
+    }
+    if (st.config.default_sound && !st.config.ffmpeg) add("warn", "p_no_ffmpeg");
+    for (const sat of st.targets) {
+      if (sat.available && !sat.timers_supported) add("info", "p_sat_no_timers", { name: sat.display });
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------------ render
+
   _render() {
     const app = this.shadowRoot.getElementById("app");
     const st = this._state;
-    const now = new Date();
+    const now = this._now();
     const parts = [];
     // Like HA's ha-menu-button: custom panels draw their own toolbar, so the
     // sidebar toggle only exists if we render it (narrow layout or sidebar
@@ -584,38 +956,232 @@ class VoiceAlarmsPanel extends HTMLElement {
       app.innerHTML = parts.join("");
       return;
     }
-    for (const s of st.ringing) {
-      parts.push(`<div class="card ringing"><div class="row">${icon("bell")}
-        <div class="grow"><div class="label">${esc(t(s.state === "paused" ? "paused_on" : "ringing_on", { kind: t(s.kind === "reminder" ? "reminder" : "alarm"), target: s.target_name }))}</div>
-        <div class="sub">${esc(s.label)}${s.message ? " — " + esc(s.message) : ""}</div></div>
-        <div class="actions"><button class="ghost" data-action="snooze" data-target="${esc(s.target)}">${t("snooze5")}</button>
-        <button class="danger" data-action="dismiss" data-target="${esc(s.target)}">${icon("stop")} ${t("dismiss")}</button></div></div></div>`);
-    }
+    const problems = this._problems(st);
+    parts.push(this._renderRinging(st));
+    parts.push(this._renderTiles(st, now, problems));
+    parts.push(this._renderIssues(problems));
+    parts.push(this._renderTimers(st, now));
     const alarms = st.alarms.filter((a) => a.kind !== "reminder");
     const reminders = st.alarms.filter((a) => a.kind === "reminder");
     parts.push(`<h2>${t("alarms")}</h2>`);
-    if (!alarms.length) {
-      parts.push(`<div class="card empty">${t("no_alarms")}</div>`);
-    }
+    if (!alarms.length) parts.push(`<div class="card empty">${t("no_alarms")}</div>`);
     for (const a of alarms) parts.push(this._renderAlarm(a, now));
     parts.push(`<h2>${t("reminders")}</h2>`);
-    if (!reminders.length) {
-      parts.push(`<div class="card empty">${t("no_reminders")}</div>`);
-    }
+    if (!reminders.length) parts.push(`<div class="card empty">${t("no_reminders")}</div>`);
     for (const a of reminders) parts.push(this._renderAlarm(a, now));
-    parts.push(`<h2>${t("satellites")}</h2><div class="card">`);
-    if (!st.targets.length) parts.push(`<div class="note">${t("no_satellites")}</div>`);
+    parts.push(this._renderSatellites(st, now));
+    parts.push(this._renderLog(st));
+    parts.push(this._renderDiagnostics(st, now));
+    parts.push(this._renderSettings(st));
+    parts.push(`</main>`);
+    app.innerHTML = parts.join("");
+    this._tick();
+  }
+
+  _renderRinging(st) {
+    return st.ringing
+      .map(
+        (s) => `<div class="card ringing"><div class="row">${icon("bell")}
+        <div class="grow"><div class="label">${esc(t(s.state === "paused" ? "paused_on" : "ringing_on", { kind: this._kindName(s.kind), target: s.target_name }))}</div>
+        <div class="sub">${esc(s.label)}${s.message ? " — " + esc(s.message) : ""}</div></div>
+        <div class="actions"><button class="ghost" data-action="snooze" data-target="${esc(s.target)}">${t("snooze5")}</button>
+        <button class="danger" data-action="dismiss" data-target="${esc(s.target)}">${icon("stop")} ${t("dismiss")}</button></div></div></div>`
+      )
+      .join("");
+  }
+
+  _renderTiles(st, now, problems) {
+    const bad = problems.filter((p) => p.level !== "info");
+    const upcoming = st.alarms.filter((a) => a.enabled && a.next).sort((x, y) => x.next.localeCompare(y.next))[0];
+    const timers = (st.timers?.running || []).filter((x) => x.is_active);
+    const soonest = timers.slice().sort((x, y) => x.seconds_left - y.seconds_left)[0];
+    const reminders = st.alarms.filter((a) => a.kind === "reminder");
+    const alarms = st.alarms.filter((a) => a.kind !== "reminder");
+    const disabled = st.alarms.filter((a) => !a.enabled).length;
+    const ok = st.targets.filter((x) => x.available).length;
+    const tile = (cls, k, v, s, attrs = "") =>
+      `<div class="card tile ${cls}"><div class="k">${esc(k)}</div><div class="v" ${attrs}>${v}</div><div class="s">${s}</div></div>`;
+    const next = upcoming
+      ? tile(
+          "",
+          t("ov_next"),
+          esc(this._timeOf(upcoming.next)),
+          `${esc(upcoming.label)} · ${esc(formatNext(upcoming.next, now, this._locale))}<br>${esc(this._target(upcoming.target)?.display || upcoming.target)}`
+        )
+      : tile("", t("ov_next"), "–", t("ov_nothing_next"));
+    const timer = soonest
+      ? tile(
+          "",
+          t("ov_timers"),
+          `<span data-ends="${esc(soonest.ends_at)}">${this._clock(soonest.seconds_left)}</span>`,
+          `${esc(soonest.name || t("timer_of", { dur: this._durText(soonest.total) }))}${timers.length > 1 ? " · " + esc(t("ov_timers_running", { n: timers.length })) : ""}`
+        )
+      : tile("", t("ov_timers"), "–", t("ov_timers_none"));
+    const sched = tile(
+      "",
+      t("ov_scheduled"),
+      `${alarms.length + reminders.length}`,
+      `${esc(t("ov_count_alarms", { n: alarms.length }))} · ${esc(t("ov_count_reminders", { n: reminders.length }))}${disabled ? " · " + esc(t("ov_disabled", { n: disabled })) : ""}`
+    );
+    const status = tile(
+      bad.length ? (bad.some((p) => p.level === "err") ? "bad" : "warn") : "ok",
+      t("ov_status"),
+      bad.length ? esc(t("ov_issues", { n: bad.length })) : esc(t("ov_ok")),
+      esc(t("ov_sats_ok", { ok, all: st.targets.length }))
+    );
+    return `<div class="tiles">${next}${timer}${sched}${status}</div>`;
+  }
+
+  _renderIssues(problems) {
+    if (!problems.length) return "";
+    return `<div class="card issues"><div class="head">${icon("alert")} ${t("issues")}</div><ul>${problems
+      .map((p) => `<li class="${p.level}">${icon("alert")}<span>${esc(p.text)}</span></li>`)
+      .join("")}</ul></div>`;
+  }
+
+  _renderTimers(st, now) {
+    const parts = [`<h2>${t("timers")}</h2>`];
+    const tm = st.timers;
+    if (!tm) return parts.join("") + `<div class="card empty">${t("timers_inactive")}</div>`;
+    const where = (x) => esc(this._satOfDevice(x.device_id)?.display || x.area || "");
+    if (!tm.running.length && !tm.pending.length) {
+      parts.push(`<div class="card empty">${t("no_timers")}</div>`);
+    }
+    for (const x of tm.running.slice().sort((a, b) => a.seconds_left - b.seconds_left)) {
+      const name = x.name || t("timer_of", { dur: this._durText(x.total) });
+      const pct = x.total ? Math.min(100, Math.max(0, (100 * (x.total - x.seconds_left)) / x.total)) : 100;
+      parts.push(`<div class="card timer ${x.is_active ? "" : "paused"}"><div class="row">
+        <div class="time" ${x.is_active ? `data-ends="${esc(x.ends_at)}"` : ""}>${this._clock(x.seconds_left)}</div>
+        <div class="grow"><div class="label">${esc(name)}</div>
+          ${x.command ? `<div class="message">${esc(t("timer_cmd", { command: x.command }))}</div>` : ""}
+          <div class="sub">${where(x)} · ${esc(t("timer_total", { dur: this._durText(x.total) }))} · ${x.is_active ? esc(t("timer_ends", { time: this._timeOf(x.ends_at) })) : t("timer_paused")}</div>
+          <div class="bar"><span ${x.is_active ? `data-bar="${esc(x.ends_at)}" data-total="${x.total}"` : ""} style="width:${pct}%"></span></div></div>
+        <div class="actions">
+          <button class="icon" title="${t(x.is_active ? "timer_pause" : "timer_resume")}" data-action="timer" data-op="${x.is_active ? "pause" : "resume"}" data-id="${esc(x.id)}">${icon(x.is_active ? "pause" : "play")}</button>
+          <button class="ghost" data-action="timer" data-op="add" data-id="${esc(x.id)}">${t("timer_add")}</button>
+          <button class="icon" title="${t("timer_cancel")}" data-action="timer" data-op="cancel" data-id="${esc(x.id)}">${icon("close")}</button>
+        </div></div></div>`);
+    }
+    for (const x of tm.pending) {
+      const name = x.name || t("timer_of", { dur: this._durText(x.total) });
+      const ago = (now - new Date(x.ended_at)) / 1000;
+      parts.push(`<div class="card timer waiting"><div class="row">
+        <div class="time">0:00</div>
+        <div class="grow"><div class="label">${esc(name)}</div>
+          <div class="sub">${where(x)} · ${esc(t("timer_waiting", { ago: this._agoText(ago) }))}</div>
+          <div class="bar"><span style="width:100%"></span></div></div></div></div>`);
+    }
+    return parts.join("");
+  }
+
+  _renderSatellites(st, now) {
+    const parts = [`<h2>${t("satellites")}</h2>`];
+    if (!st.targets.length) return parts.join("") + `<div class="card"><div class="note">${t("no_satellites")}</div></div>`;
+    parts.push(`<div class="satgrid">`);
     for (const sat of st.targets) {
       const next = st.alarms.filter((a) => a.target === sat.entity_id && a.enabled && a.next).sort((x, y) => x.next.localeCompare(y.next))[0];
       const ringing = st.ringing.find((s) => s.target === sat.entity_id);
-      parts.push(`<div class="sat">${icon("speaker")}<div class="grow"><div class="label">${esc(sat.display)}</div>
-        <div class="sub">${esc(sat.entity_id)} · ${sat.media_player ? esc(t("volume_via", { player: sat.media_player })) : t("no_media_player")}</div>
-        <div class="sub">${next ? esc(t("next", { label: next.label, when: formatNext(next.next, now, this._locale) })) : t("no_upcoming")}</div></div>
-        <div class="actions">${ringing ? `<button class="danger" data-action="dismiss" data-target="${esc(sat.entity_id)}">${icon("stop")} ${t("dismiss")}</button>` : `<button class="ghost" data-action="test" data-target="${esc(sat.entity_id)}">${icon("play")} ${t("test")}</button>`}</div></div>`);
+      const timers = (st.timers?.running || []).filter((x) => x.device_id && x.device_id === sat.device_id);
+      const busy = ["listening", "processing", "responding"].includes(sat.state);
+      const stateText = t(`sat_${sat.state}`) === `sat_${sat.state}` ? sat.state : t(`sat_${sat.state}`);
+      const vol = sat.player_volume != null ? `${Math.round(sat.player_volume * 100)} %` : "–";
+      const player = sat.media_player
+        ? `${esc(sat.player_state || "?")} · ${esc(vol)}`
+        : esc(t("no_media_player"));
+      parts.push(`<div class="card sat-card ${sat.available ? "" : "offline"}"><div class="row">
+        <span class="dot ${sat.available ? (busy ? "busy" : "") : "off"}"></span>
+        <div class="grow"><div class="label">${esc(sat.display)}</div><div class="sub mono">${esc(sat.entity_id)}</div></div>
+        <div class="actions">${ringing ? `<button class="danger" data-action="dismiss" data-target="${esc(sat.entity_id)}">${icon("stop")} ${t("dismiss")}</button>` : `<button class="ghost" data-action="test" data-target="${esc(sat.entity_id)}">${icon("play")} ${t("test")}</button>`}</div></div>
+        <dl class="kv">
+          <dt>${t("sat_state")}</dt><dd>${esc(stateText)}</dd>
+          <dt>${t("sat_player")}</dt><dd>${player}</dd>
+          <dt>${t("sat_timer_support")}</dt><dd>${sat.timers_supported ? t("sat_yes") : t("sat_no")}${timers.length ? " · " + esc(t("sat_n_timers", { n: timers.length })) : ""}</dd>
+          <dt>${t("sat_next")}</dt><dd>${next ? esc(`${next.label} · ${formatNext(next.next, now, this._locale)}`) : t("no_upcoming")}</dd>
+        </dl></div>`);
     }
+    parts.push(`</div>`);
+    return parts.join("");
+  }
+
+  _eventText(e) {
+    const where = e.where || "?";
+    const what = this._kindName(e.what);
+    const name = e.label ? `“${e.label}”` : "";
+    const dur = this._durText(e.seconds || 0);
+    const late = this._agoText(e.late || 0);
+    const by = t(`by_${e.by}`) === `by_${e.by}` ? e.by : t(`by_${e.by}`);
+    const scheduled = e.scheduled ? this._timeOf(e.scheduled) : "";
+    return t(`ev_${e.kind}`, {
+      what, label: e.label, where, name, dur, late, by, scheduled,
+      entity: e.entity, running: e.running, pending: e.pending,
+    });
+  }
+
+  _renderLog(st) {
+    const parts = [`<h2>${t("log")}</h2><div class="card">`];
+    if (!st.events.length) {
+      parts.push(`<div class="note">${t("log_empty")}</div></div>`);
+      return parts.join("");
+    }
+    parts.push(`<div class="log scroll">`);
+    let day = "";
+    for (const e of st.events) {
+      const at = new Date(e.at);
+      const d = at.toLocaleDateString(this._locale, { weekday: "long", day: "numeric", month: "long" });
+      if (d !== day) {
+        day = d;
+        parts.push(`<div class="day">${esc(d)}</div>`);
+      }
+      const level = ["missed", "no_satellite", "timer_dropped"].includes(e.kind) ? "err" : e.kind === "timer_late" ? "warn" : "";
+      parts.push(`<div class="ev ${level}"><span class="at">${esc(at.toLocaleTimeString(this._locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }))}</span><span class="tx">${esc(this._eventText(e))}</span></div>`);
+    }
+    parts.push(`</div><div class="note" style="margin-top:8px">${esc(t("log_note", { n: st.events.length }))}</div></div>`);
+    return parts.join("");
+  }
+
+  _diagnostics(st) {
+    return {
+      voice_alarms: st.debug,
+      config: st.config,
+      satellites: st.targets,
+      alarms: st.alarms.map(({ id, kind, time, date, weekdays, enabled, target, next, last_fired, skipped_occurrence, duration }) => ({
+        id, kind, time, date, weekdays, enabled, target, next, last_fired, skipped_occurrence, duration,
+      })),
+      timers: st.timers,
+      ringing: st.ringing,
+      events: st.events,
+      browser: { locale: LOCALE, time: new Date().toISOString(), server_time: st.now },
+    };
+  }
+
+  _renderDiagnostics(st, now) {
+    const d = st.debug;
+    const row = (k, v, mono = false) => `<dt>${t(k)}</dt><dd class="${mono ? "mono" : ""}">${v}</dd>`;
+    const ok = st.targets.filter((x) => x.available).length;
+    return `<h2>${t("diagnostics")}</h2><div class="card">
+      <details data-key="diag" ${this._open_attr("diag")}><summary>${icon("bug")} ${t("details")}</summary>
+      <dl class="kv">
+        ${row("k_version", esc(d.version))}
+        ${row("k_ha", esc(d.ha_version))}
+        ${row("k_tz", esc(d.time_zone))}
+        ${row("k_lang", esc(d.language))}
+        ${row("k_server_time", esc(this._dateTime(st.now)))}
+        ${row("k_started", esc(this._dateTime(d.started_at)))}
+        ${row("k_next_check", d.next_check ? esc(this._dateTime(d.next_check)) : "–")}
+        ${row("k_timers", d.timers_persistent ? t("on") : t("off"))}
+        ${row("k_alarms", esc(`${d.alarms_total} (${d.alarms_enabled} ${t("enabled").toLowerCase()}, ${d.reminders} ${t("reminders")})`))}
+        ${row("k_grace", esc(this._durText(st.config.missed_grace)))}
+        ${row("k_ffmpeg", st.config.ffmpeg ? t("found") : t("missing"))}
+        ${row("k_sats", esc(t("ov_sats_ok", { ok, all: st.targets.length })))}
+      </dl>
+      <div class="tools"><button class="ghost" data-action="copy-diag">${icon(this._copied ? "check" : "copy")} ${t(this._copied ? "diag_copied" : "diag_copy")}</button>
+        <span class="note">${t("diag_hint")}</span></div></details></div>`;
+  }
+
+  _renderSettings(st) {
     const ramp = rampFromConfig(st.config);
     const admin = !!this._hass?.user?.is_admin;
-    parts.push(`</div><h2>${t("settings")}</h2><div class="card">
+    return `<h2>${t("settings")}</h2><div class="card">
       <div class="row"><div class="grow"><div class="label">${t("volume_ramp")}</div><div class="sub">${esc(rampSummary(ramp))}</div></div>
         ${admin ? `<div class="actions"><button class="ghost" data-action="ramp">${icon("edit")} ${t("edit_ramp")}</button></div>` : ""}</div>
       <div class="ramp-preview">${rampSvg(ramp, false)}</div>
@@ -625,8 +1191,21 @@ class VoiceAlarmsPanel extends HTMLElement {
       ${t("sound", { sound: st.config.default_sound ? esc(st.config.default_sound) : t("built_in") })}${st.config.default_sound && !st.config.ffmpeg ? t("ffmpeg_missing") : ""}.
       ${t("change_hint")}</div>
       <div class="note" style="margin-top:8px">${t("preview_label")}</div>
-      <audio controls preload="none" src="/api/voice_alarms/sound/default.wav"></audio></div></main>`);
-    app.innerHTML = parts.join("");
+      <audio controls preload="none" src="/api/voice_alarms/sound/default.wav"></audio></div>`;
+  }
+
+  // Countdowns move every second without drawing the page again.
+  _tick() {
+    const root = this.shadowRoot;
+    const nowMs = this._now().getTime();
+    for (const el of root.querySelectorAll("[data-ends]")) {
+      el.textContent = this._clock((new Date(el.dataset.ends).getTime() - nowMs) / 1000);
+    }
+    for (const el of root.querySelectorAll("[data-bar]")) {
+      const total = Number(el.dataset.total) * 1000;
+      const left = new Date(el.dataset.bar).getTime() - nowMs;
+      el.style.width = `${total ? Math.min(100, Math.max(0, (100 * (total - left)) / total)) : 100}%`;
+    }
   }
 
   _renderAlarm(a, now) {
@@ -644,13 +1223,28 @@ class VoiceAlarmsPanel extends HTMLElement {
       <div class="grow"><div class="label">${esc(a.label)}</div>${message}
         <div class="sub">${esc(schedule)} · ${esc(target ? target.display : a.target)}</div>
         <div class="sub">${a.enabled ? esc(formatNext(a.next, now, this._locale)) : ""}</div>
-        <div class="badges">${badges.join("")}</div></div>
+        <div class="badges">${badges.join("")}</div>
+        ${this._alarmDetails(a)}</div>
       <div class="actions">
         <label class="switch" title="${t("enabled")}"><input type="checkbox" data-action="toggle" data-id="${esc(a.id)}" ${a.enabled ? "checked" : ""}><span></span></label>
         ${a.is_recurring ? `<button class="icon" title="${t(a.next_skipped ? "reinstate_next" : "skip_next")}" data-action="${a.next_skipped ? "unskip" : "skip"}" data-id="${esc(a.id)}">${icon(a.next_skipped ? "undo" : "skip")}</button>` : ""}
         <button class="icon" title="${t("edit")}" data-action="edit" data-id="${esc(a.id)}">${icon("edit")}</button>
         <button class="icon" title="${t("delete")}" data-action="delete" data-id="${esc(a.id)}">${icon("del")}</button>
       </div></div></div>`;
+  }
+
+  _alarmDetails(a) {
+    const key = `alarm:${a.id}`;
+    const d = this._state.config.default_duration;
+    const row = (k, v, mono = false) => `<dt>${t(k)}</dt><dd class="${mono ? "mono" : ""}">${v}</dd>`;
+    return `<details data-key="${esc(key)}" ${this._open_attr(key)}><summary>${t("details")}</summary><dl class="kv">
+      ${row("d_id", esc(a.id), true)}
+      ${row("d_created", esc(this._dateTime(a.created)))}
+      ${row("d_last_fired", a.last_fired ? esc(this._dateTime(a.last_fired)) : t("d_never"))}
+      ${row("d_duration", a.duration ? esc(this._durText(a.duration)) : esc(t("d_default", { dur: this._durText(d) })))}
+      ${row("d_sound", a.sound ? esc(a.sound) : t("built_in"), !!a.sound)}
+      ${a.skipped_occurrence ? row("d_skipped", esc(this._dateTime(a.skipped_occurrence))) : ""}
+    </dl></details>`;
   }
 
   async _call(service, data, returnResponse = false) {
@@ -701,8 +1295,64 @@ class VoiceAlarmsPanel extends HTMLElement {
       case "ramp":
         this._openRampEditor();
         break;
+      case "timer":
+        await this._timerOp(el.dataset.id, el.dataset.op);
+        break;
+      case "copy-diag":
+        await this._copyDiagnostics();
+        break;
       default:
         break;
+    }
+  }
+
+  async _timerOp(timerId, op) {
+    this._error = "";
+    const msg = { type: "voice_alarms/timer", timer_id: timerId, action: op };
+    if (op === "add") msg.seconds = 60;
+    try {
+      await this._hass.callWS(msg);
+    } catch (err) {
+      this._error = err?.message || String(err);
+      this._render();
+    }
+  }
+
+  async _copyDiagnostics() {
+    const text = JSON.stringify(this._diagnostics(this._state), null, 2);
+    let done = false;
+    try {
+      // Home Assistant is often served over plain http, where the async clipboard is missing.
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        done = true;
+      }
+    } catch (_err) {
+      done = false;
+    }
+    if (!done) {
+      const box = document.createElement("textarea");
+      box.value = text;
+      box.style.position = "fixed";
+      box.style.opacity = "0";
+      document.body.appendChild(box);
+      box.select();
+      try {
+        done = document.execCommand("copy");
+      } catch (_err) {
+        done = false;
+      }
+      box.remove();
+    }
+    this._copied = done;
+    if (!done) this._error = text;
+    this._render();
+    if (done) {
+      clearTimeout(this._copiedTimer);
+      this._copiedTimer = setTimeout(() => {
+        this._copied = false;
+        this._render();
+      }, 2500);
     }
   }
 

@@ -7,6 +7,8 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
+from homeassistant.components.intent.const import TIMER_DATA
+from homeassistant.components.intent.timers import TimerNotFoundError
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
@@ -14,10 +16,13 @@ from .const import (
     DOMAIN,
     SIGNAL_ALARMS_UPDATED,
     SIGNAL_CONFIG_UPDATED,
+    SIGNAL_LOG_UPDATED,
     SIGNAL_RINGING_UPDATED,
     SIGNAL_TARGETS_UPDATED,
+    SIGNAL_TIMERS_UPDATED,
 )
 from .manager import AlarmManager
+from .timers import PersistentTimerManager
 
 _UNIT = vol.All(vol.Coerce(float), vol.Range(min=0, max=1))
 
@@ -52,6 +57,8 @@ def async_register_websocket(hass: HomeAssistant, get_manager) -> None:
             async_dispatcher_connect(hass, SIGNAL_RINGING_UPDATED, push),
             async_dispatcher_connect(hass, SIGNAL_TARGETS_UPDATED, push),
             async_dispatcher_connect(hass, SIGNAL_CONFIG_UPDATED, push),
+            async_dispatcher_connect(hass, SIGNAL_TIMERS_UPDATED, push),
+            async_dispatcher_connect(hass, SIGNAL_LOG_UPDATED, push),
         ]
 
         @callback
@@ -96,6 +103,42 @@ def async_register_websocket(hass: HomeAssistant, get_manager) -> None:
         manager.async_set_ramp(seconds=msg["seconds"], start=msg["start"], curve=(x1, y1, x2, y2))
         connection.send_result(msg["id"], manager.config_dict())
 
+    @websocket_api.websocket_command(
+        {
+            vol.Required("type"): f"{DOMAIN}/timer",
+            vol.Required("timer_id"): str,
+            vol.Required("action"): vol.In(["cancel", "pause", "resume", "add"]),
+            vol.Optional("seconds", default=60): vol.All(
+                vol.Coerce(int), vol.Range(min=-86400, max=86400)
+            ),
+        }
+    )
+    @callback
+    def timer(
+        hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    ) -> None:
+        """Cancel, pause, resume or change the time of one of Assist's timers."""
+        timers = hass.data.get(TIMER_DATA)
+        if not isinstance(timers, PersistentTimerManager):
+            connection.send_error(msg["id"], "not_loaded", "Voice Alarms is not loaded")
+            return
+        timer_id = msg["timer_id"]
+        try:
+            match msg["action"]:
+                case "cancel":
+                    timers.cancel_timer(timer_id)
+                case "pause":
+                    timers.pause_timer(timer_id)
+                case "resume":
+                    timers.unpause_timer(timer_id)
+                case "add":
+                    timers.add_time(timer_id, msg["seconds"])
+        except TimerNotFoundError:
+            connection.send_error(msg["id"], "not_found", "That timer no longer exists")
+            return
+        connection.send_result(msg["id"])
+
     websocket_api.async_register_command(hass, subscribe)
+    websocket_api.async_register_command(hass, timer)
     websocket_api.async_register_command(hass, snapshot)
     websocket_api.async_register_command(hass, set_ramp)

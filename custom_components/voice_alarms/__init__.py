@@ -95,7 +95,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: VoiceAlarmsConfigEntry) 
     hass.data[DATA_MANAGER] = manager
 
     # Home Assistant's timers ("set a timer for 5 minutes"), kept across restarts.
-    hass.data[DATA_TIMERS] = await async_take_over_timers(hass, lambda: manager.missed_grace)
+    hass.data[DATA_TIMERS] = await async_take_over_timers(
+        hass, lambda: manager.missed_grace, manager.log_event
+    )
 
     async_register_intents(hass, manager)
     async_register_services(hass, manager)

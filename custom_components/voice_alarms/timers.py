@@ -36,11 +36,12 @@ from homeassistant.components.intent.timers import TimerHandler, TimerManager
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EVENT_STATE_CHANGED, STATE_UNAVAILABLE
 from homeassistant.core import CALLBACK_TYPE, Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_TIMERS_UPDATED
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,9 +77,11 @@ class PersistentTimerManager(TimerManager):
         hass: HomeAssistant,
         previous: TimerManager,
         grace: Callable[[], timedelta],
+        log: Callable[..., None] | None = None,
     ) -> None:
         super().__init__(hass)
         self.previous = previous
+        self._log = log or (lambda kind, **data: None)
         # The same dict object: handlers registered with the previous manager stay
         # registered, and the unregister callbacks they hold pop from it.
         self.handlers = previous.handlers
@@ -149,6 +152,7 @@ class PersistentTimerManager(TimerManager):
             self._resync(device_id)
         self._deliver_all()
         self._save()
+        self._log("timers_taken_over", running=len(self.timers), pending=len(self.finished))
         _LOGGER.debug(
             "Timers taken over: %d running or paused, %d to deliver",
             len(self.timers),
@@ -197,12 +201,28 @@ class PersistentTimerManager(TimerManager):
     def start_timer(self, *args: Any, **kwargs: Any) -> str:
         """Start a timer and save it."""
         timer_id = super().start_timer(*args, **kwargs)
+        timer = self.timers[timer_id]
+        self._log(
+            "timer_started",
+            label=timer.name or "",
+            seconds=timer.created_seconds,
+            target=timer.device_id,
+            command=timer.conversation_command or "",
+        )
         self._save()
         return timer_id
 
     def cancel_timer(self, timer_id: str) -> None:
         """Cancel a timer and save."""
+        timer = self.timers.get(timer_id)
         super().cancel_timer(timer_id)
+        if timer is not None:
+            self._log(
+                "timer_cancelled",
+                label=timer.name or "",
+                seconds=timer.created_seconds,
+                target=timer.device_id,
+            )
         self._save()
 
     def add_time(self, timer_id: str, seconds: int) -> None:
@@ -289,6 +309,13 @@ class PersistentTimerManager(TimerManager):
                 timer.name or _length(timer),
                 _ago(late),
             )
+            self._log(
+                "timer_dropped",
+                label=timer.name or "",
+                seconds=timer.created_seconds,
+                target=timer.device_id,
+                late=int(late.total_seconds()),
+            )
             self._save()
             return
         if timer.conversation_command:
@@ -300,6 +327,13 @@ class PersistentTimerManager(TimerManager):
             )
         elif self._notify(timer.device_id, TimerEventType.FINISHED, timer):
             del self.finished[timer_id]
+            self._log(
+                "timer_late" if late > RETRY_INTERVAL else "timer_rang",
+                label=timer.name or "",
+                seconds=timer.created_seconds,
+                target=timer.device_id,
+                late=int(late.total_seconds()),
+            )
             if late > RETRY_INTERVAL:
                 _LOGGER.info("Timer '%s' rung %s late", timer.name or _length(timer), _ago(late))
         else:
@@ -381,6 +415,41 @@ class PersistentTimerManager(TimerManager):
                 self._save()
             # STARTED/UPDATED: the state is sent again when the satellite is back.
 
+    # --------------------------------------------------------------- panel
+
+    def snapshot(self) -> dict[str, Any]:
+        """What the panel shows of the timers: running and paused, ended but not rung."""
+        now_ns = time.monotonic_ns()
+        now = dt_util.utcnow()
+
+        def item(timer: TimerInfo, *, ended: datetime | None = None) -> dict[str, Any]:
+            left = 0.0 if ended else _exact_left(timer, now_ns)
+            return {
+                "id": timer.id,
+                "name": timer.name or "",
+                "device_id": timer.device_id,
+                "language": timer.language,
+                "area": timer.area_name,
+                "total": timer.created_seconds,
+                "seconds_left": round(left, 1),
+                "is_active": timer.is_active,
+                "ends_at": (
+                    (now + timedelta(seconds=left)).isoformat()
+                    if timer.is_active and not ended
+                    else None
+                ),
+                "ended_at": ended.isoformat() if ended else None,
+                "command": timer.conversation_command or "",
+                "satellite_known": timer.device_id in self.handlers,
+            }
+
+        return {
+            "running": [item(t) for t in self.timers.values()],
+            "pending": [item(p.timer, ended=p.at) for p in self.finished.values()],
+            "unsent_cancels": sum(len(v) for v in self._unsent_cancels.values()),
+            "devices": sorted(self.handlers),
+        }
+
     # ----------------------------------------------------------- persistence
 
     def _schedule(self, timer: TimerInfo, seconds: float) -> None:
@@ -435,6 +504,7 @@ class PersistentTimerManager(TimerManager):
     def _save(self) -> None:
         if self._active:
             self._store.async_delay_save(self._data, SAVE_DELAY)
+            async_dispatcher_send(self.hass, SIGNAL_TIMERS_UPDATED)
 
     @callback
     def _data(self) -> dict[str, Any]:
@@ -512,7 +582,9 @@ def _ago(delta: timedelta) -> str:
 
 
 async def async_take_over_timers(
-    hass: HomeAssistant, grace: Callable[[], timedelta]
+    hass: HomeAssistant,
+    grace: Callable[[], timedelta],
+    log: Callable[..., None] | None = None,
 ) -> PersistentTimerManager:
     """Put a persistent timer manager in place of Home Assistant's."""
     previous = hass.data[TIMER_DATA]
@@ -528,7 +600,7 @@ async def async_take_over_timers(
         # Handlers registered from now on (with either manager) land in the safe
         # dict; unregister callbacks of earlier ones look ``self.handlers`` up.
         previous.handlers = safe
-    manager = PersistentTimerManager(hass, previous, grace)
+    manager = PersistentTimerManager(hass, previous, grace, log)
     safe.manager = manager
     await manager.async_take_over()
     return manager

@@ -6,19 +6,24 @@ import asyncio
 import logging
 import shutil
 from array import array
+from collections import deque
 from dataclasses import fields, replace
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from homeassistant.components.assist_satellite import DOMAIN as ASSIST_SATELLITE_DOMAIN
 from homeassistant.components.ffmpeg import get_ffmpeg_manager
+from homeassistant.components.intent.const import TIMER_DATA
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.core import CALLBACK_TYPE, Event, HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.helpers.storage import Store
+from homeassistant.loader import async_get_loaded_integration
 from homeassistant.util import dt as dt_util
 
 from .audio import Curve, RampSpec
@@ -45,9 +50,11 @@ from .const import (
     KIND_ALARM,
     KIND_REMINDER,
     MAX_ALARM_DURATION,
+    MAX_EVENT_LOG,
     MAX_SNOOZE_MINUTES,
     SIGNAL_ALARMS_UPDATED,
     SIGNAL_CONFIG_UPDATED,
+    SIGNAL_LOG_UPDATED,
     SIGNAL_RINGING_UPDATED,
     SIGNAL_TARGETS_UPDATED,
     STORAGE_KEY,
@@ -59,6 +66,7 @@ from .i18n import LocalizedError, default_language, tr
 from .models import Alarm, combine_local, is_valid_sound
 from .ringer import RingConfig, RingSession
 from .targets import Target, get_target, get_targets, match_targets
+from .timers import PersistentTimerManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,6 +96,10 @@ class AlarmManager:
         self.alarms: dict[str, Alarm] = {}
         self.sessions: dict[str, RingSession] = {}
         self.recent_sessions: list[RingSession] = []
+        # What happened, newest last, for the panel's log (not saved: a debugging aid).
+        self.events: deque[dict[str, Any]] = deque(maxlen=MAX_EVENT_LOG)
+        self._next_check: datetime | None = None
+        self._started_at = dt_util.utcnow()
         # Reminders that fired while an alarm rang on their satellite; spoken after it.
         self._queued: dict[str, list[Alarm]] = {}
         self.ffmpeg_binary: str | None = None
@@ -328,6 +340,25 @@ class AlarmManager:
     @callback
     def _notify_ringing(self) -> None:
         async_dispatcher_send(self.hass, SIGNAL_RINGING_UPDATED)
+
+    @callback
+    def log_event(self, kind: str, **data: Any) -> None:
+        """Record something that happened, for the panel's log.
+
+        ``target`` may be a satellite entity id or a device id; the log keeps the
+        satellite's name (``where``) so that it still reads right after a rename.
+        """
+        target = data.pop("target", None)
+        where = None
+        if target:
+            for candidate in self.targets():
+                if target in (candidate.entity_id, candidate.device_id):
+                    where = candidate.display
+                    break
+        self.events.append(
+            {"at": dt_util.utcnow().isoformat(), "kind": kind, "where": where, **data}
+        )
+        async_dispatcher_send(self.hass, SIGNAL_LOG_UPDATED)
 
     # -------------------------------------------------------------- targets
 
@@ -675,6 +706,17 @@ class AlarmManager:
             del self.sessions[session.target.entity_id]
         self.recent_sessions.append(session)
         del self.recent_sessions[:-MAX_RECENT_SESSIONS]
+        self.log_event(
+            "ring_ended",
+            label=session.label,
+            what=session.kind,
+            target=session.target.entity_id,
+            by=session.dismissed_by or "timeout",
+            origin=session.origin,
+            seconds=int(
+                ((session.finished_at or dt_util.utcnow()) - session.started).total_seconds()
+            ),
+        )
         self._notify_ringing()
         entity_id = session.target.entity_id
         # A session that was followed by another one leaves the queue to it.
@@ -729,6 +771,13 @@ class AlarmManager:
                     _LOGGER.warning(
                         "Missed %s '%s' scheduled %s", alarm.kind, alarm.label, occurrence
                     )
+                    self.log_event(
+                        "missed",
+                        label=alarm.label,
+                        what=alarm.kind,
+                        target=alarm.target,
+                        scheduled=occurrence.isoformat(),
+                    )
                     alarm.last_fired = occurrence
                     changed = True
                     occurrence = alarm.next_occurrence(occurrence)
@@ -759,6 +808,7 @@ class AlarmManager:
                 self.hass.async_create_task(self._process())
                 return
 
+            self._next_check = next_time
             if next_time is not None:
                 self._unsub_timer = async_track_point_in_utc_time(
                     self.hass, self._timer_fired, next_time + timedelta(milliseconds=50)
@@ -777,8 +827,10 @@ class AlarmManager:
                 alarm.label,
                 alarm.target,
             )
+            self.log_event("no_satellite", label=alarm.label, what=alarm.kind, entity=alarm.target)
         else:
             _LOGGER.info("Ringing %s '%s' on %s", alarm.kind, alarm.label, target.display)
+            self.log_event("rings", label=alarm.label, what=alarm.kind, target=target.entity_id)
             await self.async_ring(
                 target,
                 alarm=alarm,
@@ -821,14 +873,50 @@ class AlarmManager:
             enabled=enabled,
         )
 
+    def _target_status(self, target: Target, timer_devices: set[str]) -> dict[str, Any]:
+        """How a satellite is doing right now, for the panel's satellite cards."""
+        state = self.hass.states.get(target.entity_id)
+        player = self.hass.states.get(target.media_player) if target.media_player else None
+        volume = player.attributes.get("volume_level") if player else None
+        return {
+            "state": state.state if state else STATE_UNKNOWN,
+            "available": state is not None and state.state != STATE_UNAVAILABLE,
+            "player_state": player.state if player else None,
+            "player_volume": volume,
+            "timers_supported": target.device_id in timer_devices if target.device_id else False,
+        }
+
     def snapshot(self) -> dict[str, Any]:
         """Full state for the frontend."""
         now = dt_util.utcnow()
+        timer_manager = self.hass.data.get(TIMER_DATA)
+        persistent = isinstance(timer_manager, PersistentTimerManager)
+        timers = timer_manager.snapshot() if persistent else None
+        timer_devices = set(timers["devices"]) if timers else set()
+        alarms = self.sorted_alarms()
+        integration = async_get_loaded_integration(self.hass, DOMAIN)
         return {
-            "alarms": [alarm.public_dict(now) for alarm in self.sorted_alarms()],
-            "targets": [target.to_dict() for target in self.targets()],
+            "alarms": [alarm.public_dict(now) for alarm in alarms],
+            "targets": [
+                {**target.to_dict(), **self._target_status(target, timer_devices)}
+                for target in self.targets()
+            ],
             "ringing": [session.to_dict() for session in self.active_sessions()],
+            "timers": timers,
+            "events": list(reversed(self.events)),
             "config": self.config_dict(),
+            "debug": {
+                "version": str(integration.version),
+                "ha_version": HA_VERSION,
+                "time_zone": str(dt_util.get_default_time_zone()),
+                "language": self.hass.config.language,
+                "started_at": self._started_at.isoformat(),
+                "next_check": self._next_check.isoformat() if self._next_check else None,
+                "timers_persistent": persistent,
+                "alarms_total": len(alarms),
+                "alarms_enabled": sum(1 for a in alarms if a.enabled),
+                "reminders": sum(1 for a in alarms if a.is_reminder),
+            },
             "now": now.isoformat(),
         }
 
