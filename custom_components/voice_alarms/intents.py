@@ -7,15 +7,18 @@ tool descriptions stay English because they are read by the LLM, not the user.
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, timedelta
 from typing import Any
 
 import voluptuous as vol
 
+from homeassistant.components.intent.timers import StartTimerIntentHandler
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import intent
 from homeassistant.util import dt as dt_util
+from homeassistant.util.hass_dict import HassKey
 
 from .const import (
     DOMAIN,
@@ -28,12 +31,13 @@ from .const import (
     INTENT_UPDATE,
     KIND_ALARM,
     KIND_REMINDER,
+    KINDS,
     RECENTLY_DISMISSED_SECONDS,
     WEEKDAY_CODES,
 )
 from .i18n import LocalizedError, normalize_language, tr
-from .manager import AlarmManager
-from .models import Alarm, parse_date, parse_time, parse_weekdays
+from .manager import AlarmManager, on_the_minute
+from .models import Alarm, local_iso, parse_date, parse_time, parse_weekdays
 from .ringer import STATE_PAUSED, RingSession
 from .speech import (
     capitalize,
@@ -49,6 +53,10 @@ from .targets import Target, get_target, get_target_for_device
 
 _LOGGER = logging.getLogger(__name__)
 
+DATA_ORIGINAL_START_TIMER: HassKey[intent.IntentHandler | None] = HassKey(
+    f"{DOMAIN}_original_start_timer"
+)
+
 WEEKDAYS_HELP = (
     "Weekdays the alarm repeats on, as a list or comma separated string of "
     f"{', '.join(WEEKDAY_CODES)}; 'daily', 'weekdays' and 'weekends' are also "
@@ -58,7 +66,17 @@ TARGET_HELP = (
     "Name, area or entity id of the voice satellite. Defaults to the satellite the "
     "user is speaking through; only set it when the user names another one."
 )
-TIME_HELP = "Time in 24-hour HH:MM format, e.g. '06:30' or '18:00'."
+TIME_HELP = (
+    "Time in 24-hour HH:MM format, e.g. '06:30' or '18:00'. Leave it out when the user "
+    "says how long from now instead ('in 20 minutes'): use in_hours / in_minutes then."
+)
+IN_HELP = (
+    "For 'in <duration>' ('remind me in 20 hours', 'wake me in 8 hours'): how long from now. "
+    "in_hours, in_minutes and in_seconds add up; give them instead of time, date and weekdays."
+)
+# How far ahead "in ..." may reach (the scheduler looks 15 days ahead for repeats;
+# a one-time alarm has no such limit, this only catches nonsense).
+MAX_IN_DAYS = 366
 DATE_HELP = (
     "Date for a one-time alarm as YYYY-MM-DD, or 'today', 'tomorrow' or a weekday name. "
     "Omit to use the next time the given time comes around."
@@ -266,13 +284,18 @@ class SetAlarmIntent(_VoiceAlarmIntent):
     intent_type = INTENT_SET
     description = (
         "Create an alarm or a spoken reminder on a voice satellite. Examples: 'wake me at 7', "
-        "'set an alarm for 6:30 on weekdays', 'remind me at 17:00 to call mom'. The alarm is "
-        "one-time unless weekdays are given. Give a message to create a reminder that is spoken "
-        "aloud instead of an alarm sound. Rings on the satellite the user is talking to unless "
-        "a target is named. The response says exactly what was created; repeat it to the user."
+        "'set an alarm for 6:30 on weekdays', 'remind me at 17:00 to call mom', 'remind me in "
+        "20 hours to fetch the laundry' (in_hours=20), 'wake me in 8 hours' (in_hours=8). The "
+        "alarm is one-time unless weekdays are given. Give a message to create a reminder that "
+        "is spoken aloud instead of an alarm sound. Rings on the satellite the user is talking "
+        "to unless a target is named. The response says exactly what was created; repeat it to "
+        "the user."
     )
     slot_schema = {
-        vol.Required("time", description=TIME_HELP): cv.string,
+        vol.Optional("time", description=TIME_HELP): cv.string,
+        vol.Optional("in_hours", description=IN_HELP): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional("in_minutes", description=IN_HELP): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional("in_seconds", description=IN_HELP): vol.All(vol.Coerce(int), vol.Range(min=0)),
         vol.Optional("date", description=DATE_HELP): cv.string,
         vol.Optional("weekdays", description=WEEKDAYS_HELP): vol.Any(cv.string, [cv.string]),
         vol.Optional(
@@ -289,15 +312,39 @@ class SetAlarmIntent(_VoiceAlarmIntent):
         ): vol.Coerce(int),
     }
 
+    def __init__(self, manager: AlarmManager, *, kind: str | None = None) -> None:
+        super().__init__(manager)
+        # None: a reminder when there is a message, else an alarm.
+        self.kind = kind
+
     async def _handle(self, intent_obj: intent.Intent, response: intent.IntentResponse) -> None:
         now = dt_util.utcnow()
         lang = self._lang(intent_obj)
-        at = parse_time(self._slot(intent_obj, "time"))
+        time_text = self._slot(intent_obj, "time")
         weekdays = parse_weekdays(self._slot(intent_obj, "weekdays"))
         date_text = self._slot(intent_obj, "date")
         if weekdays and date_text:
             raise IntentFailed("err_date_and_weekdays")
-        on_date = parse_date(date_text, now) if date_text else None
+        in_seconds = _in_seconds(intent_obj)
+        if in_seconds is not None:
+            if time_text:
+                raise IntentFailed("err_time_and_in")
+            if weekdays or date_text:
+                raise IntentFailed("err_in_with_date")
+            if in_seconds > MAX_IN_DAYS * 86400:
+                raise IntentFailed("err_in_range", days=MAX_IN_DAYS)
+            when = on_the_minute(now + timedelta(seconds=in_seconds))
+            if when <= now:
+                when += timedelta(minutes=1)
+            # Local only now (arithmetic on local times loses ``fold``); time() keeps
+            # it, so the second 02:30 of the night the clocks go back stays the second.
+            local = dt_util.as_local(when)
+            at, on_date = local.time(), local.date()
+        elif time_text:
+            at = parse_time(time_text)
+            on_date = parse_date(date_text, now) if date_text else None
+        else:
+            raise IntentFailed("err_time_or_in")
         target = self._resolve_target(intent_obj, self._slot(intent_obj, "target"))
         message = self._slot(intent_obj, "message")
         duration_minutes = self._slot(intent_obj, "duration_minutes")
@@ -308,7 +355,7 @@ class SetAlarmIntent(_VoiceAlarmIntent):
             weekdays=weekdays,
             name=self._slot(intent_obj, "name"),
             message=message,
-            kind=KIND_REMINDER if message else KIND_ALARM,
+            kind=self.kind or (KIND_REMINDER if message else KIND_ALARM),
             duration=int(duration_minutes) * 60 if duration_minutes else None,
         )
         alarm = await self.manager.async_add_alarm(alarm)
@@ -321,7 +368,7 @@ class SetAlarmIntent(_VoiceAlarmIntent):
                 "alarm_id": alarm.id,
                 "target": target.entity_id,
                 "target_name": target.display,
-                "next": nxt.isoformat() if nxt else None,
+                "next": local_iso(nxt),
                 "repeats": _repeats(alarm, lang),
             }
         )
@@ -486,7 +533,7 @@ class ListAlarmsIntent(_VoiceAlarmIntent):
                         "label": alarm.label,
                         "kind": alarm.kind,
                         "target": alarm.target,
-                        "rings_at": at.isoformat(),
+                        "rings_at": local_iso(at),
                         "skipped": skipped,
                     }
                     for at, alarm, skipped in rings
@@ -629,9 +676,7 @@ class SkipNextIntent(_VoiceAlarmIntent):
                     relative=format_relative(nxt, now, lang),
                 )
             response.async_set_speech(text + ".")
-            response.async_set_speech_slots(
-                {"alarm_id": alarm.id, "next": nxt.isoformat() if nxt else None}
-            )
+            response.async_set_speech_slots({"alarm_id": alarm.id, "next": local_iso(nxt)})
             return
         after = max(now, alarm.pending_after())
         scheduled = alarm.next_scheduled(after)
@@ -671,8 +716,8 @@ class SkipNextIntent(_VoiceAlarmIntent):
         response.async_set_speech_slots(
             {
                 "alarm_id": alarm.id,
-                "skipped": skipped.isoformat() if skipped else None,
-                "next": nxt.isoformat() if nxt else None,
+                "skipped": local_iso(skipped),
+                "next": local_iso(nxt),
             }
         )
 
@@ -728,8 +773,8 @@ class SkipNextIntent(_VoiceAlarmIntent):
         response.async_set_speech_slots(
             {
                 "alarm_ids": [alarm.id for alarm, _ in results],
-                "skipped": [at.isoformat() for _, at in results if at is not None],
-                "next": min(nexts).isoformat() if nexts else None,
+                "skipped": [local_iso(at) for _, at in results if at is not None],
+                "next": local_iso(min(nexts)) if nexts else None,
             }
         )
 
@@ -851,7 +896,7 @@ class UpdateAlarmIntent(_VoiceAlarmIntent):
             {
                 "alarm_id": updated[0].id,
                 "alarm_ids": [a.id for a in updated],
-                "next": min(nexts).isoformat() if nexts else None,
+                "next": local_iso(min(nexts)) if nexts else None,
             }
         )
 
@@ -977,7 +1022,7 @@ def _alarm_summary(alarm: Alarm, now: datetime, lang: str) -> dict[str, Any]:
         "time": alarm.time.strftime("%H:%M"),
         "repeats": _repeats(alarm, lang),
         "date": alarm.date.isoformat() if alarm.date else None,
-        "next": nxt.isoformat() if nxt else None,
+        "next": local_iso(nxt),
         "enabled": alarm.enabled,
     }
 
@@ -993,9 +1038,102 @@ def _next_ring_day(alarm: Alarm, now: datetime) -> date:
     return dt_util.as_local(nxt).date() if nxt is not None else date.max
 
 
+def _in_seconds(intent_obj: intent.Intent) -> int | None:
+    """Seconds from the in_hours/in_minutes/in_seconds slots, None if none is given."""
+    total: int | None = None
+    for key, factor in (("in_hours", 3600), ("in_minutes", 60), ("in_seconds", 1)):
+        value = _VoiceAlarmIntent._slot(intent_obj, key)  # noqa: SLF001
+        if value is None:
+            continue
+        try:
+            number = int(float(value))
+        except (TypeError, ValueError) as err:
+            raise vol.Invalid(f"{key}: {value!r} is not a number") from err
+        if number < 0:
+            raise vol.Invalid(f"{key} must not be negative")
+        total = (total or 0) + number * factor
+    return total
+
+
+# "<command> in 20 hours" is one of Home Assistant's own timer sentences: a delayed
+# command, run through the conversation agent when the timer ends. "Remind me of the
+# laundry in 20 hours" and "wake me in 8 hours" match it too, and then nothing rings and
+# nothing is said: the agent is merely handed "remind me of the laundry" 20 hours later.
+# These patterns pick such commands out; they become a reminder or an alarm instead.
+_REMIND_RES = (
+    # German: "erinnere mich (bitte) (an|daran) (, dass) ...", "erinner uns ..."
+    re.compile(
+        r"^\s*(?:bitte\s+)?erinner(?:e|t)?\s+(?:mich|uns)\b[\s,]*(?:bitte\b[\s,]*)?"
+        r"(?:(?:an|ans|daran)\b[\s,]*)?(?:dass\b[\s,]*)?(?P<text>.*?)[\s.!?]*$",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    # English: "remind me (to|about|of|that) ..."
+    re.compile(
+        r"^\s*(?:please\s+)?remind\s+(?:me|us)\b[\s,]*(?:(?:to|about|of|that)\b[\s,]*)?"
+        r"(?P<text>.*?)[\s.!?]*$",
+        re.IGNORECASE | re.DOTALL,
+    ),
+)
+# A wake-up only as the whole command: "wake me and turn on the lights" stays Home
+# Assistant's delayed command, or its second half would be lost.
+_WAKE_RES = (
+    re.compile(
+        r"^\s*(?:bitte\s+)?weck(?:e|t)?\s+(?:mich|uns)(?:\s+bitte)?(?:\s+auf)?(?:\s+bitte)?"
+        r"[\s.!?]*$",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"^\s*(?:please\s+)?wake\s+(?:me|us)(?:\s+up)?(?:\s+please)?[\s.!?]*$",
+        re.IGNORECASE,
+    ),
+)
+
+
+def reminder_from_command(command: str) -> tuple[str, str | None] | None:
+    """(kind, message) when a delayed command asks for a reminder or a wake-up."""
+    for pattern in _REMIND_RES:
+        if match := pattern.match(command):
+            return KIND_REMINDER, match.group("text").strip() or None
+    for pattern in _WAKE_RES:
+        if pattern.match(command):
+            return KIND_ALARM, None
+    return None
+
+
+class ReminderTimerIntent(StartTimerIntentHandler):
+    """Home Assistant's HassStartTimer, with reminders and wake-ups made what they are.
+
+    Every other timer, delayed commands included, is left to Home Assistant's own
+    handler (this class) unchanged.
+    """
+
+    def __init__(self, manager: AlarmManager) -> None:
+        super().__init__()
+        self._set = {kind: SetAlarmIntent(manager, kind=kind) for kind in KINDS}
+
+    async def async_handle(self, intent_obj: intent.Intent) -> intent.IntentResponse:
+        """Handle the intent."""
+        command = intent_obj.slots.get("conversation_command", {}).get("value")
+        found = reminder_from_command(command) if isinstance(command, str) else None
+        if found is None:
+            return await super().async_handle(intent_obj)
+        kind, message = found
+        _LOGGER.debug("Timer command %r becomes a %s", command, kind)
+        slots: dict[str, Any] = {
+            key: intent_obj.slots[key]
+            for key in ("hours", "minutes", "seconds")
+            if key in intent_obj.slots
+        }
+        # A reminder without words still speaks ("Reminder 14:23"), not an alarm sound.
+        intent_obj.slots = {f"in_{key}": value for key, value in slots.items()}
+        if message:
+            intent_obj.slots["message"] = {"value": message}
+        return await self._set[kind].async_handle(intent_obj)
+
+
 @callback
 def async_register_intents(hass: HomeAssistant, manager: AlarmManager) -> None:
-    """Register all intents."""
+    """Register all intents, and HassStartTimer's stand-in (the original is kept)."""
     for handler_cls in (
         SetAlarmIntent,
         ListAlarmsIntent,
@@ -1005,11 +1143,26 @@ def async_register_intents(hass: HomeAssistant, manager: AlarmManager) -> None:
         DismissIntent,
     ):
         intent.async_register(hass, handler_cls(manager))
+    handlers = hass.data.get(intent.DATA_KEY, {})
+    original = handlers.get(intent.INTENT_START_TIMER)
+    if isinstance(original, ReminderTimerIntent):
+        original = hass.data.get(DATA_ORIGINAL_START_TIMER)
+    hass.data[DATA_ORIGINAL_START_TIMER] = original
+    # intent.async_register would log a warning about overwriting it.
+    handlers[intent.INTENT_START_TIMER] = ReminderTimerIntent(manager)
+    hass.data[intent.DATA_KEY] = handlers
     _LOGGER.debug("Registered %s intents for %s", len(INTENT_TYPES), DOMAIN)
 
 
 @callback
 def async_unregister_intents(hass: HomeAssistant) -> None:
-    """Remove all intents."""
+    """Remove all intents and put Home Assistant's HassStartTimer back."""
     for intent_type in INTENT_TYPES:
         intent.async_remove(hass, intent_type)
+    handlers = hass.data.get(intent.DATA_KEY, {})
+    original = hass.data.pop(DATA_ORIGINAL_START_TIMER, None)
+    if isinstance(handlers.get(intent.INTENT_START_TIMER), ReminderTimerIntent):
+        if original is not None:
+            handlers[intent.INTENT_START_TIMER] = original
+        else:
+            handlers.pop(intent.INTENT_START_TIMER)

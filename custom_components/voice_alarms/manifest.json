@@ -11,6 +11,7 @@
     "ffmpeg",
     "frontend",
     "http",
+    "intent",
     "llm",
     "media_source",
     "panel_custom",
@@ -22,5 +23,5 @@
   "issue_tracker": "https://github.com/Gamer92000/hass_alarm/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

@@ -126,6 +126,10 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "An alarm either repeats on weekdays or rings once on a date, not both. Drop "
             "the date; a repeating alarm starts with its next occurrence."
         ),
+        "err_time_and_in": "Give either a clock time or how long from now ('in'), not both.",
+        "err_time_or_in": "Say when: a clock time, or how long from now.",
+        "err_in_with_date": "'In' some time from now rings once: drop the date and the weekdays.",
+        "err_in_range": "That is too far ahead; at most {days} days from now.",
         "created": "Created {alarm}.",
         "repeats_once": "once",
         "scope_on": " on {names}",
@@ -281,6 +285,14 @@ STRINGS: Final[dict[str, dict[str, str]]] = {
             "Datum, nicht beides. Lass das Datum weg; ein wiederkehrender Wecker beginnt mit "
             "seinem nächsten Termin."
         ),
+        "err_time_and_in": (
+            "Gib entweder eine Uhrzeit an oder in wie vielen Stunden oder Minuten, nicht beides."
+        ),
+        "err_time_or_in": "Sag, wann: eine Uhrzeit oder in wie vielen Stunden oder Minuten.",
+        "err_in_with_date": (
+            "„In“ einer Zeitspanne klingelt einmal: lass das Datum und die Wochentage weg."
+        ),
+        "err_in_range": "Das ist zu weit weg; höchstens {days} Tage ab jetzt.",
         "created": "Erstellt: {alarm}.",
         "repeats_once": "einmalig",
         "scope_on": " auf {names}",

@@ -13,8 +13,11 @@ from .targets import get_target_for_device
 PROMPT = (
     "Alarms and reminders on voice satellites are managed with the voice_alarms__ tools "
     "(set, list, update, skip next, delete, dismiss). Always use them instead of timers for "
-    "anything at a clock time or on a date; a duration like 'in 20 minutes' is a timer, not "
-    "an alarm. Pass times as 24-hour HH:MM and dates as YYYY-MM-DD ('today', 'tomorrow' and "
+    "anything at a clock time or on a date. A plain countdown ('set a timer for 20 minutes', "
+    "'pasta timer 8 minutes') is a timer. A reminder or a wake-up after a duration ('remind "
+    "me in 20 hours to fetch the laundry', 'wake me in 8 hours') is set with the set tool "
+    "and in_hours/in_minutes, never as a timer or a delayed timer command. Pass times as "
+    "24-hour HH:MM and dates as YYYY-MM-DD ('today', 'tomorrow' and "
     "weekday names are also accepted). Pick alarms with the time, name or date filters; there "
     "is no need to list first to get an id. When the user asks what rings on a particular day "
     "('when will you wake me tomorrow?', 'do I have an alarm on Friday?'), call the list tool "

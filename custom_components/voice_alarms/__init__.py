@@ -27,6 +27,12 @@ from .i18n import set_default_language
 from .intents import async_register_intents, async_unregister_intents
 from .manager import AlarmManager
 from .services import async_register_services, async_unregister_services
+from .timers import (
+    PersistentTimerManager,
+    async_hand_back_timers,
+    async_remove_timer_store,
+    async_take_over_timers,
+)
 from .websocket import async_register_websocket
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,6 +41,7 @@ FRONTEND_DIR = Path(__file__).parent / "frontend"
 DATA_MANAGER: HassKey[AlarmManager] = HassKey(f"{DOMAIN}_manager")
 DATA_LOOP: HassKey[array] = HassKey(f"{DOMAIN}_loop")
 DATA_SHARED_READY: HassKey[bool] = HassKey(f"{DOMAIN}_shared_ready")
+DATA_TIMERS: HassKey[PersistentTimerManager] = HassKey(f"{DOMAIN}_timers")
 
 type VoiceAlarmsConfigEntry = ConfigEntry
 
@@ -87,6 +94,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: VoiceAlarmsConfigEntry) 
     await manager.async_load()
     hass.data[DATA_MANAGER] = manager
 
+    # Home Assistant's timers ("set a timer for 5 minutes"), kept across restarts.
+    hass.data[DATA_TIMERS] = await async_take_over_timers(hass, lambda: manager.missed_grace)
+
     async_register_intents(hass, manager)
     async_register_services(hass, manager)
 
@@ -118,6 +128,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: VoiceAlarmsConfigEntry)
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     async_unregister_intents(hass)
     async_unregister_services(hass)
+    if (timers := hass.data.pop(DATA_TIMERS, None)) is not None:
+        await async_hand_back_timers(timers)
     frontend.async_remove_panel(hass, PANEL_URL_PATH, warn_if_unknown=False)
     hass.data.pop(DATA_MANAGER, None)
     return unloaded
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: VoiceAlarmsConfigEntry) -> None:
+    """The integration is removed: its saved timers go with it."""
+    await async_remove_timer_store(hass)

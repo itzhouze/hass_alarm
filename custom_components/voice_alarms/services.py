@@ -49,7 +49,14 @@ from .const import (
 )
 from .i18n import LocalizedError, default_language, tr
 from .manager import AlarmError, AlarmManager
-from .models import ParseError, is_valid_sound, parse_date, parse_time, parse_weekdays
+from .models import (
+    ParseError,
+    is_valid_sound,
+    local_iso,
+    parse_date,
+    parse_time,
+    parse_weekdays,
+)
 
 SERVICES = [
     SERVICE_ADD_ALARM,
@@ -209,7 +216,7 @@ def async_register_services(hass: HomeAssistant, manager: AlarmManager) -> None:
             raise _wrap(err) from err
         return {
             "alarm": alarm.public_dict(),
-            "occurrence": occurrence.isoformat() if occurrence else None,
+            "occurrence": local_iso(occurrence),
         }
 
     async def dismiss(call: ServiceCall) -> ServiceResponse:

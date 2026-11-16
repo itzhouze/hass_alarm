@@ -188,8 +188,14 @@ def parse_date(value: Any, now: datetime) -> date:
 
 
 def combine_local(day: date, at: time) -> datetime:
-    """Combine a local date and time into an aware datetime."""
-    return datetime.combine(day, at, tzinfo=dt_util.get_default_time_zone())
+    """Combine a local date and time into the instant, as an aware UTC datetime.
+
+    UTC, not local: a local time in the hour the clocks go back is ambiguous, and
+    Python treats it so: arithmetic drops its ``fold`` (02:30 + 50 ms is the first
+    02:30 again, an hour early) and it never compares equal to the same instant in
+    another zone. ``at.fold`` picks which of the two it is.
+    """
+    return dt_util.as_utc(datetime.combine(day, at, tzinfo=dt_util.get_default_time_zone()))
 
 
 @dataclass
@@ -312,6 +318,9 @@ class Alarm:
             "id": self.id,
             "target": self.target,
             "time": self.time.strftime("%H:%M"),
+            # The later of two equal clock times the night the clocks go back
+            # (an "in 3 hours" can land there); left out otherwise.
+            **({"fold": 1} if self.time.fold else {}),
             "name": self.name,
             "date": self.date.isoformat() if self.date else None,
             "weekdays": list(self.weekdays),
@@ -333,7 +342,7 @@ class Alarm:
         return cls(
             id=data["id"],
             target=data["target"],
-            time=parse_time(data["time"]),
+            time=parse_time(data["time"]).replace(fold=1 if data.get("fold") else 0),
             name=data.get("name"),
             date=date.fromisoformat(data["date"]) if data.get("date") else None,
             weekdays=[int(d) for d in data.get("weekdays") or []],
@@ -356,9 +365,12 @@ class Alarm:
         data = self.to_dict()
         data.update(
             {
+                # Stored as UTC; shown with the local offset like "next".
+                "skipped_occurrence": local_iso(self.skipped_occurrence),
+                "last_fired": local_iso(self.last_fired),
                 "label": self.label,
                 "is_recurring": self.is_recurring,
-                "next": nxt.isoformat() if nxt else None,
+                "next": local_iso(nxt),
                 "next_skipped": bool(
                     self.enabled
                     and scheduled is not None
@@ -368,6 +380,11 @@ class Alarm:
             }
         )
         return data
+
+
+def local_iso(value: datetime | None) -> str | None:
+    """A ring time for people and the LLM: ISO with the local offset (stored as UTC)."""
+    return dt_util.as_local(value).isoformat() if value is not None else None
 
 
 def parse_dt(value: str | None) -> datetime | None:

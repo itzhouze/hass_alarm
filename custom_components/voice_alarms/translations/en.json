@@ -12,7 +12,7 @@
           "default_sound": "Alarm sound (URL or media-source id, empty = built-in sound)",
           "reminder_repeats": "How often a reminder is spoken",
           "reminder_interval": "Pause between reminder repeats",
-          "missed_grace": "Still ring an alarm if it was missed by at most",
+          "missed_grace": "Still ring an alarm or timer if it was missed by at most",
           "device_stop_pause": "When the alarm is stopped on the device itself, resume ringing after (0 = treat as dismissed)"
         }
       }
@@ -38,7 +38,7 @@
           "default_sound": "Alarm sound (URL or media-source id, empty = built-in sound)",
           "reminder_repeats": "How often a reminder is spoken",
           "reminder_interval": "Pause between reminder repeats",
-          "missed_grace": "Still ring an alarm if it was missed by at most",
+          "missed_grace": "Still ring an alarm or timer if it was missed by at most",
           "device_stop_pause": "When the alarm is stopped on the device itself, resume ringing after (0 = treat as dismissed)"
         }
       }

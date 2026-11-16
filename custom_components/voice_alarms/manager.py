@@ -645,13 +645,7 @@ class AlarmManager:
         """Dismiss a session and ring again in ``minutes`` minutes."""
         if not 1 <= minutes <= MAX_SNOOZE_MINUTES:
             raise AlarmError("err_snooze_minutes")
-        # Alarms ring on the minute. Round up, so that a snooze is never
-        # noticeably short, unless that would add almost a whole minute.
-        exact = dt_util.utcnow() + timedelta(minutes=minutes)
-        when = exact.replace(second=0, microsecond=0)
-        if exact - when > SNOOZE_ROUND_DOWN:
-            when += timedelta(minutes=1)
-        when = dt_util.as_local(when)
+        when = dt_util.as_local(on_the_minute(dt_util.utcnow() + timedelta(minutes=minutes)))
         base = session.alarms[0] if session.alarms else None
         alarm = Alarm(
             target=session.target.entity_id,
@@ -837,6 +831,18 @@ class AlarmManager:
             "config": self.config_dict(),
             "now": now.isoformat(),
         }
+
+
+def on_the_minute(exact: datetime) -> datetime:
+    """The whole minute at which something due at ``exact`` rings.
+
+    Alarms ring on the minute. Round up, so that a snooze or an "in 20 minutes" is
+    never noticeably short, unless that would add almost a whole minute.
+    """
+    when = exact.replace(second=0, microsecond=0)
+    if exact - when > SNOOZE_ROUND_DOWN:
+        when += timedelta(minutes=1)
+    return when
 
 
 def _next_date(at: time, now: datetime) -> date:

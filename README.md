@@ -34,6 +34,10 @@ supported.
   per alarm.
 - Reminders are spoken (text-to-speech) instead of ringing, repeated a few times.
 - Missed alarms (e.g. Home Assistant restarted at alarm time) still ring within a grace period.
+- Home Assistant's own timers ("set a timer for 5 minutes") survive a restart of Home
+  Assistant and a satellite that is briefly offline (see [Timers](#timers)).
+- "Remind me in 20 hours to …" and "wake me in 8 hours" make a reminder or an alarm, also
+  when Home Assistant handles the sentence itself instead of the LLM.
 - English and German throughout: panel, config flow, entities, services and the spoken
   responses.
 
@@ -70,6 +74,7 @@ automatically. No extra configuration is needed. Examples:
 | "Set an alarm for 7 on weekdays called work" | Repeating alarm Mon–Fri. |
 | "Set an alarm for 8 tomorrow in the bedroom" | Target another satellite by name or area. |
 | "Remind me at 5 pm to call mom" | Spoken reminder. |
+| "Remind me in 20 hours to fetch the laundry" / "Wake me in 8 hours" | Spoken reminder / alarm that far from now (on the minute, never early). |
 | "Skip tomorrow's alarm" / "Don't wake me tomorrow" | Skips only the next occurrence (all alarms of that wake-up if you have several). |
 | "Move my work alarm to 6:45" / "Disable all my alarms" | Updates the alarm(s). |
 | "What alarms do I have?" | Lists everything with the next ring time. |
@@ -92,6 +97,38 @@ The built-in (non-LLM) Assist agent does not have sentences for these intents ou
 box. You can add your own under `custom_sentences/<lang>/voice_alarms.yaml` targeting the
 intents `VoiceAlarmSet`, `VoiceAlarmList`, `VoiceAlarmDelete`, `VoiceAlarmSkipNext`,
 `VoiceAlarmUpdate` and `VoiceAlarmDismiss`.
+
+### "In 20 hours" and Home Assistant's own sentences
+
+Home Assistant has a timer sentence of its own for delayed commands: "*&lt;command&gt;* in
+20 hours". With *Prefer handling commands locally* on, Home Assistant answers sentences such as
+"Remind me of the laundry in 20 hours" or "Erinnere mich an die Wäsche in 20 Stunden" itself,
+before the LLM sees them, and 20 hours later merely hands "remind me of the laundry" to the
+conversation agent: nothing rings, nothing is said. Voice Alarms takes over Home Assistant's
+`HassStartTimer` intent and turns such a delayed command into a reminder (its text is what
+follows "remind me", "erinnere mich an", …) or, for "wake me" / "weck mich", an alarm. Every
+other timer and delayed command is left to Home Assistant's own handler unchanged. The LLM is
+told the same: a reminder or wake-up after a duration goes to `voice_alarms`, a plain countdown
+is a timer.
+
+## Timers
+
+Home Assistant keeps the timers of Assist ("set a timer for 5 minutes", "how long is left on the
+pasta timer?") in memory only: a restart forgets every running timer, and a timer that ends while
+its satellite is not connected is lost. Voice Alarms puts a manager in place of Home Assistant's
+that keeps them:
+
+- Every timer is saved as it changes. After a restart it runs on to its original end; a paused
+  one stays paused.
+- A timer that ended while Home Assistant was down, or while its satellite was offline, rings as
+  soon as the satellite is reachable again, if that is within the *missed alarm grace*
+  (10 minutes by default). Later than that it is dropped, with a warning in the log.
+- A satellite that comes back is told the state of its timers again, and of timers cancelled
+  meanwhile.
+
+Everything else is Home Assistant's: its sentences and responses, the LLM's timer tools, and how
+each satellite shows and rings a timer. Unloading Voice Alarms hands the running timers back to
+Home Assistant's manager; removing it deletes the saved ones.
 
 ### Stopping an alarm on the device
 
@@ -131,7 +168,7 @@ interrupted by anything that is due.
 | Satellite volume while ringing | *(empty)* | If set, the satellite media player is set to this volume during the alarm and restored afterwards. |
 | Alarm sound | built-in | http(s) URL, `/local/...` path or `media-source://media_source/local/file.mp3` (also for the per-alarm sound; downloads for ffmpeg are capped at 20 MB). Can be overridden per alarm. |
 | Reminder repeats / pause | 3 × 60 s | How often and how spaced a reminder is spoken. |
-| Missed alarm grace | 600 s | An alarm that was missed by less than this (restart, downtime) still rings. |
+| Missed alarm grace | 600 s | An alarm or timer that was missed by less than this (restart, downtime, satellite offline) still rings. |
 | Resume ringing after device stop | 0 s | 0 = a stop on the device dismisses the alarm; otherwise the alarm pauses that many seconds and rings again. |
 
 ## Services
